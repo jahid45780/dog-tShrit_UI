@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, PawPrint } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { FaTwitter, FaFacebookSquare, FaInstagramSquare } from "react-icons/fa";
 import Logo from "@/share/Logo";
 

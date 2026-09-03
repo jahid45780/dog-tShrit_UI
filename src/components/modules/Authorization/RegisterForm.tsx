@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+
 
 import { User, Mail, Lock, Phone } from "lucide-react";
 
@@ -10,8 +10,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 // import { useRegisterMutation } from "@/redux/features/auth/auth.api";
 
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+
+// import { useNavigate } from "react-router-dom";
 
 // =====================================================
 // ZOD VALIDATION
@@ -59,7 +59,7 @@ type FormValues = z.infer<typeof formSchema>;
 const RegisterForm = () => {
 //   const [register, { isLoading }] = useRegisterMutation();
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   // ===================================================
   // REACT HOOK FORM
@@ -81,37 +81,41 @@ const RegisterForm = () => {
   // SUBMIT
   // ===================================================
 
-  const onSubmit = async (data: FormValues) => {
-    // confirmPassword শুধু frontend validation-এর জন্য।
-    // Backend/API-তে এটা পাঠানোর প্রয়োজন নেই।
+  // const onSubmit = async (data: FormValues) => {
+  //   // confirmPassword শুধু frontend validation-এর জন্য।
+  //   // Backend/API-তে এটা পাঠানোর প্রয়োজন নেই।
 
-    const userInfo = {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      password: data.password,
-    };
+  //   // const userInfo = {
+  //   //   name: data.name,
+  //   //   email: data.email,
+  //   //   phone: data.phone,
+  //   //   password: data.password,
+  //   // };
 
-    try {
-      // ================================================
-      // REDUX RTK QUERY API CALL
-      // ================================================
+  //   try {
+  //     // ================================================
+  //     // REDUX RTK QUERY API CALL
+  //     // ================================================
 
-    //   await register(userInfo).unwrap();
+  //   //   await register(userInfo).unwrap();
 
-      toast.success(
-        "Registration successful! Please login to continue."
-      );
+  //     toast.success(
+  //       "Registration successful! Please login to continue."
+  //     );
 
-      navigate("/login");
-    } catch (error) {
-      console.log("Registration error:", error);
+  //     navigate("/login");
+  //   } catch (error) {
+  //     console.log("Registration error:", error);
 
-      toast.error(
-        "Registration failed. Please try again."
-      );
-    }
-  };
+  //     toast.error(
+  //       "Registration failed. Please try again."
+  //     );
+  //   }
+  // };
+
+  const onSubmit = () => {
+  // Registration function will be added later
+};
 
   return (
     <form
