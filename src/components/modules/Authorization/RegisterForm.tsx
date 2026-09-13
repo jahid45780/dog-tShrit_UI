@@ -1,21 +1,31 @@
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
+import {
+  User,
+  Mail,
+  Lock,
+  Phone,
+  Eye,
+  EyeOff,
+  Loader2,
+} from "lucide-react";
 
-import { User, Mail, Lock, Phone } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// import { useRegisterMutation } from "@/redux/features/auth/auth.api";
+import { useRegisterMutation } from "@/redux/features/auth/auth.api";
 
-
-// import { useNavigate } from "react-router-dom";
-
-// =====================================================
-// ZOD VALIDATION
-// =====================================================
+/* =====================================================
+   ZOD VALIDATION
+===================================================== */
 
 const formSchema = z
   .object({
@@ -26,6 +36,7 @@ const formSchema = z
 
     email: z
       .string()
+      .min(1, "Email is required.")
       .email("Please enter a valid email address."),
 
     phone: z
@@ -46,24 +57,28 @@ const formSchema = z
     path: ["confirmPassword"],
   });
 
-// =====================================================
-// TYPE
-// =====================================================
+/* =====================================================
+   TYPE
+===================================================== */
 
 type FormValues = z.infer<typeof formSchema>;
 
-// =====================================================
-// REGISTER FORM
-// =====================================================
+/* =====================================================
+   REGISTER FORM
+===================================================== */
 
 const RegisterForm = () => {
-//   const [register, { isLoading }] = useRegisterMutation();
+  const navigate = useNavigate();
 
-  // const navigate = useNavigate();
+  const [registerUser, { isLoading }] = useRegisterMutation();
 
-  // ===================================================
-  // REACT HOOK FORM
-  // ===================================================
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
+
+  /* ===================================================
+     REACT HOOK FORM
+  =================================================== */
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -77,45 +92,58 @@ const RegisterForm = () => {
     },
   });
 
-  // ===================================================
-  // SUBMIT
-  // ===================================================
+  /* ===================================================
+     SUBMIT
+  =================================================== */
 
-  // const onSubmit = async (data: FormValues) => {
-  //   // confirmPassword শুধু frontend validation-এর জন্য।
-  //   // Backend/API-তে এটা পাঠানোর প্রয়োজন নেই।
+  const onSubmit = async (data: FormValues) => {
+    try {
 
-  //   // const userInfo = {
-  //   //   name: data.name,
-  //   //   email: data.email,
-  //   //   phone: data.phone,
-  //   //   password: data.password,
-  //   // };
+      const userInfo = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        password: data.password,
+      };
 
-  //   try {
-  //     // ================================================
-  //     // REDUX RTK QUERY API CALL
-  //     // ================================================
+        //  REGISTER API
 
-  //   //   await register(userInfo).unwrap();
 
-  //     toast.success(
-  //       "Registration successful! Please login to continue."
-  //     );
+      const response = await registerUser(userInfo).unwrap();
 
-  //     navigate("/login");
-  //   } catch (error) {
-  //     console.log("Registration error:", error);
+      console.log("Register response:", response);
 
-  //     toast.error(
-  //       "Registration failed. Please try again."
-  //     );
-  //   }
-  // };
+      toast.success(
+        response?.message ||
+          "Registration successful! Please login."
+      );
 
-  const onSubmit = () => {
-  // Registration function will be added later
-};
+      /* ================================================
+         Login page-এ redirect
+      ================================================ */
+
+      navigate("/login");
+
+      /* ================================================
+         Form reset
+      ================================================ */
+
+      form.reset();
+    } catch (error: any) {
+      console.log("========== REGISTER ERROR ==========");
+  console.log("Status:", error?.status);
+  console.log("Data:", error?.data);
+  console.log("Message:", error?.data?.message);
+  console.log("====================================");
+      console.error("Registration error:", error);
+
+      toast.error(
+        error?.data?.message ||
+          error?.message ||
+          "Registration failed. Please try again."
+      );
+    }
+  };
 
   return (
     <form
@@ -134,6 +162,7 @@ const RegisterForm = () => {
         <div className="relative">
           <User
             className="
+              pointer-events-none
               absolute
               left-3
               top-1/2
@@ -149,11 +178,11 @@ const RegisterForm = () => {
             id="name"
             type="text"
             placeholder="Enter your full name"
+            disabled={isLoading}
             className="h-11 pl-10"
           />
         </div>
 
-        {/* Name Error */}
         {form.formState.errors.name && (
           <p className="text-sm text-destructive">
             {form.formState.errors.name.message}
@@ -173,6 +202,7 @@ const RegisterForm = () => {
         <div className="relative">
           <Mail
             className="
+              pointer-events-none
               absolute
               left-3
               top-1/2
@@ -188,11 +218,12 @@ const RegisterForm = () => {
             id="email"
             type="email"
             placeholder="Enter your email"
+            autoComplete="email"
+            disabled={isLoading}
             className="h-11 pl-10"
           />
         </div>
 
-        {/* Email Error */}
         {form.formState.errors.email && (
           <p className="text-sm text-destructive">
             {form.formState.errors.email.message}
@@ -212,6 +243,7 @@ const RegisterForm = () => {
         <div className="relative">
           <Phone
             className="
+              pointer-events-none
               absolute
               left-3
               top-1/2
@@ -227,11 +259,12 @@ const RegisterForm = () => {
             id="phone"
             type="tel"
             placeholder="01XXXXXXXXX"
+            autoComplete="tel"
+            disabled={isLoading}
             className="h-11 pl-10"
           />
         </div>
 
-        {/* Phone Error */}
         {form.formState.errors.phone && (
           <p className="text-sm text-destructive">
             {form.formState.errors.phone.message}
@@ -251,6 +284,7 @@ const RegisterForm = () => {
         <div className="relative">
           <Lock
             className="
+              pointer-events-none
               absolute
               left-3
               top-1/2
@@ -264,13 +298,41 @@ const RegisterForm = () => {
           <Input
             {...form.register("password")}
             id="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Create a password"
-            className="h-11 pl-10"
+            autoComplete="new-password"
+            disabled={isLoading}
+            className="h-11 pl-10 pr-11"
           />
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowPassword((prev) => !prev)
+            }
+            disabled={isLoading}
+            aria-label={
+              showPassword
+                ? "Hide password"
+                : "Show password"
+            }
+            className="
+              absolute
+              right-3
+              top-1/2
+              -translate-y-1/2
+              text-muted-foreground
+              hover:text-foreground
+            "
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
         </div>
 
-        {/* Password Error */}
         {form.formState.errors.password && (
           <p className="text-sm text-destructive">
             {form.formState.errors.password.message}
@@ -290,6 +352,7 @@ const RegisterForm = () => {
         <div className="relative">
           <Lock
             className="
+              pointer-events-none
               absolute
               left-3
               top-1/2
@@ -303,16 +366,51 @@ const RegisterForm = () => {
           <Input
             {...form.register("confirmPassword")}
             id="confirmPassword"
-            type="password"
+            type={
+              showConfirmPassword
+                ? "text"
+                : "password"
+            }
             placeholder="Confirm your password"
-            className="h-11 pl-10"
+            autoComplete="new-password"
+            disabled={isLoading}
+            className="h-11 pl-10 pr-11"
           />
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowConfirmPassword((prev) => !prev)
+            }
+            disabled={isLoading}
+            aria-label={
+              showConfirmPassword
+                ? "Hide confirm password"
+                : "Show confirm password"
+            }
+            className="
+              absolute
+              right-3
+              top-1/2
+              -translate-y-1/2
+              text-muted-foreground
+              hover:text-foreground
+            "
+          >
+            {showConfirmPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
         </div>
 
-        {/* Confirm Password Error */}
         {form.formState.errors.confirmPassword && (
           <p className="text-sm text-destructive">
-            {form.formState.errors.confirmPassword.message}
+            {
+              form.formState.errors.confirmPassword
+                .message
+            }
           </p>
         )}
       </div>
@@ -321,17 +419,26 @@ const RegisterForm = () => {
           SUBMIT BUTTON
       ================================================= */}
 
-      {/* <Button
+      <Button
         type="submit"
         disabled={isLoading}
         className="h-11 w-full"
       >
-        {isLoading
-          ? "Creating account..."
-          : "Create account"}
-      </Button> */}
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Creating account...
+          </>
+        ) : (
+          "Create account"
+        )}
+      </Button>
+
     </form>
   );
 };
 
 export default RegisterForm;
+
+
+
