@@ -1,15 +1,27 @@
-import { Link, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowUpRight,
   Home,
   Info,
   Layers,
   MessageCircle,
-  ShoppingBag
+  ShoppingBag,
+  UserRound,
+  LogOut,
+  ArrowUpRight,
 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { ModeToggle } from "../theme/mode-toggle";
 import Logo from "@/share/Logo";
+
+import {
+  authApi,
+  useLogoutMutation,
+  useUserInfoQuery,
+} from "@/redux/features/auth/auth.api";
+
+import { useAppDispatch } from "@/redux/hooks";
+import { role } from "@/constants/role";
 
 const navLinks = [
   {
@@ -41,6 +53,43 @@ const navLinks = [
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const { data } = useUserInfoQuery(undefined);
+  const [logout] = useLogoutMutation();
+
+  const user = data?.data;
+  
+
+  const avatarLetter =
+    user?.name?.charAt(0)?.toUpperCase() || "U";
+
+  // =========================
+  // DASHBOARD NAVIGATION
+  // =========================
+  const handleDashboard = () => {
+    if (user?.role === role.ADMIN) {
+      navigate("/admin");
+    } else if (user?.role === role.USER) {
+      navigate("/user");
+    }
+  };
+
+  // =========================
+  // LOGOUT
+  // =========================
+  const handleLogout = async () => {
+    try {
+      await logout(undefined).unwrap();
+
+      dispatch(authApi.util.resetApiState());
+
+      navigate("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <>
@@ -49,30 +98,29 @@ const Navbar = () => {
       ========================== */}
       <div className="relative z-[60] flex h-9 items-center justify-center border-b border-border bg-background px-4 text-center">
         <p className="flex items-center justify-center text-[11px] font-medium tracking-wide text-muted-foreground sm:text-xs">
+          <Logo
+            imageClassName="
+              h-5
+              w-auto
+              rounded-none
+              object-contain
+            "
+          />
 
-  <Logo
-    imageClassName="
-      h-5
-      w-auto
-      rounded-none
-      object-contain
-    "
-  />
+          <span className="mx-2 text-muted-foreground">•</span>
 
-  <span className="mx-2 text-muted-foreground">•</span>
+          <span className="text-foreground">
+            Wear Your Love for Dogs
+          </span>
 
-  <span className="text-foreground">
-    Wear Your Love for Dogs
-  </span>
+          <span className="mx-2 hidden text-muted-foreground sm:inline">
+            •
+          </span>
 
-  <span className="mx-2 hidden text-muted-foreground sm:inline">
-    •
-  </span>
-
-  <span className="hidden sm:inline">
-    Free Shipping on Orders Over $50
-  </span>
-</p>
+          <span className="hidden sm:inline">
+            Free Shipping on Orders Over $50
+          </span>
+        </p>
 
         {/* Theme Toggle */}
         <div className="absolute right-3">
@@ -92,25 +140,32 @@ const Navbar = () => {
           md:block
         "
       >
-        <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-8">
-
+        <div
+          className="
+            mx-auto flex h-[76px]
+            max-w-7xl
+            items-center
+            justify-between
+            px-5 sm:px-8
+          "
+        >
           {/* =====================
               LOGO
           ====================== */}
-         <Link
-  to="/"
-  className="group flex items-center shrink-0"
-  aria-label="Atnamira Home"
->
-  <Logo
-    imageClassName="
-      h-14
-      w-auto
-      rounded-none
-      object-contain
-    "
-  />
-</Link>
+          <Link
+            to="/"
+            className="group flex shrink-0 items-center"
+            aria-label="Atnamira Home"
+          >
+            <Logo
+              imageClassName="
+                h-14
+                w-auto
+                rounded-none
+                object-contain
+              "
+            />
+          </Link>
 
           {/* =====================
               DESKTOP NAVIGATION
@@ -126,7 +181,8 @@ const Navbar = () => {
             "
           >
             {navLinks.map((link) => {
-              const isActive = location.pathname === link.path;
+              const isActive =
+                location.pathname === link.path;
 
               return (
                 <Link
@@ -156,7 +212,6 @@ const Navbar = () => {
                 >
                   {link.name}
 
-                  {/* Hover underline */}
                   {!isActive && (
                     <span
                       className="
@@ -177,64 +232,123 @@ const Navbar = () => {
           </nav>
 
           {/* =====================
-              SHOP NOW
+              AUTH ACTIONS
           ====================== */}
-        {/* =====================
-    CTA BUTTONS
-====================== */}
-<div className="flex items-center gap-3">
-  {/* Login */}
-  <Button
-   
-    variant="outline"
-    className="
-      h-11
-      rounded-full
-      border-border
-      bg-background
-      px-5
-      font-semibold
-      text-foreground
-      transition-all duration-300
-      hover:bg-muted
-    "
-  >
-    <Link to="/login">
-      Login
-    </Link>
-  </Button>
+          <div className="flex items-center gap-3">
+            {user ? (
+              <>
+                {/* Avatar */}
+                <button
+                  type="button"
+                  onClick={handleDashboard}
+                  className="
+                    flex h-11 w-11
+                    items-center justify-center
+                    rounded-full
+                    bg-foreground
+                    text-background
+                    text-sm font-bold
+                    uppercase
+                    shadow-sm
+                    transition-all
+                    duration-300
+                    hover:scale-105
+                    hover:shadow-md
+                    focus:outline-none
+                    focus:ring-2
+                    focus:ring-foreground
+                    focus:ring-offset-2
+                    focus:ring-offset-background
+                  "
+                  title="Dashboard"
+                >
+                  {avatarLetter}
+                </button>
 
-  {/* Shop Now */}
-  <Button
+                {/* Profile */}
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/profile")}
+                  className="
+                    h-11
+                    rounded-full
+                    border-border
+                    bg-background
+                    px-5
+                    font-semibold
+                    text-foreground
+                    transition-all duration-300
+                    hover:bg-muted
+                  "
+                >
+                  <UserRound className="mr-2 h-4 w-4" />
+                  Profile
+                </Button>
 
-    className="
-      group
-      h-11
-      rounded-full
-      bg-foreground
-      px-5
-      font-semibold
-      text-background
-      shadow-sm
-      transition-all duration-300
-      hover:bg-foreground/90
-      hover:shadow-md
-    "
-  >
-    <Link to="/shop">
-      Shop Now
+                {/* Logout */}
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="
+                    h-11
+                    rounded-full
+                    border-border
+                    bg-background
+                    px-5
+                    font-semibold
+                    text-foreground
+                    transition-all duration-300
+                    hover:bg-muted
+                  "
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                {/* Login */}
+                <Button
+                  variant="outline"
+                  className="
+                    h-11
+                    rounded-full
+                    border-border
+                    bg-background
+                    px-5
+                    font-semibold
+                    text-foreground
+                    transition-all duration-300
+                    hover:bg-muted
+                  "
+                >
+                  <Link to="/login">Login</Link>
+                </Button>
 
-      <ArrowUpRight
-        className="
-          ml-1 h-4 w-4
-          transition-transform duration-300
-          group-hover:-translate-y-0.5
-          group-hover:translate-x-0.5
-        "
-      />
-    </Link>
-  </Button>
-</div>
+                {/* Register */}
+                <Button
+                  className="
+                    h-11
+                    rounded-full
+                    bg-foreground
+                    px-5
+                    font-semibold
+                    text-background
+                    transition-all duration-300
+                    hover:opacity-90
+                  "
+                >
+                  <Link
+                    to="/register"
+                    className="flex items-center"
+                  >
+                    Create Account
+                    <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -258,13 +372,20 @@ const Navbar = () => {
         <div className="mx-auto flex max-w-md items-center justify-around">
           {navLinks.map((link) => {
             const Icon = link.icon;
-            const isActive = location.pathname === link.path;
+
+            const isActive =
+              location.pathname === link.path;
 
             return (
               <Link
                 key={link.path}
                 to={link.path}
-                className="flex flex-1 flex-col items-center justify-center"
+                className="
+                  flex flex-1
+                  flex-col
+                  items-center
+                  justify-center
+                "
               >
                 <div
                   className={`
@@ -299,6 +420,79 @@ const Navbar = () => {
               </Link>
             );
           })}
+
+          {/* =====================
+              MOBILE USER
+          ====================== */}
+          {user ? (
+            <button
+              type="button"
+              onClick={handleDashboard}
+              className="flex flex-1 flex-col items-center justify-center"
+            >
+              <div
+                className="
+                  flex min-w-[58px]
+                  flex-col items-center
+                  justify-center
+                  rounded-xl
+                  px-2 py-2
+                  text-muted-foreground
+                  transition-all duration-300
+                  hover:bg-muted
+                  hover:text-foreground
+                "
+              >
+                <div
+                  className="
+                    flex h-5 w-5
+                    items-center justify-center
+                    rounded-full
+                    bg-foreground
+                    text-[10px]
+                    font-bold
+                    text-background
+                  "
+                >
+                  {avatarLetter}
+                </div>
+
+                <span className="mt-1 text-[10px] font-medium">
+                  Dashboard
+                </span>
+              </div>
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="
+                flex flex-1
+                flex-col
+                items-center
+                justify-center
+              "
+            >
+              <div
+                className="
+                  flex min-w-[58px]
+                  flex-col items-center
+                  justify-center
+                  rounded-xl
+                  px-2 py-2
+                  text-muted-foreground
+                  transition-all duration-300
+                  hover:bg-muted
+                  hover:text-foreground
+                "
+              >
+                <UserRound className="h-5 w-5" />
+
+                <span className="mt-1 text-[10px] font-medium">
+                  Login
+                </span>
+              </div>
+            </Link>
+          )}
         </div>
       </nav>
     </>
