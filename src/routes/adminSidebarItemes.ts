@@ -1,3 +1,4 @@
+import AddProduct from "@/components/modules/admin/AddProduct";
 import type { ISidebarItem } from "@/types";
 
 
@@ -14,12 +15,12 @@ export const adminSidebarItems:ISidebarItem[] = [
     ],
   },
   {
-    title: "PayNest Management",
+    title: "Atnamina Management",
     items: [
       {
-        title: "Add Tour Type",
-        url: "/admin/add-tour-type",
-        // component: AddTourType,
+        title: "Add Product",
+        url: "/admin/add-product",
+        component: AddProduct,
       },
     
    

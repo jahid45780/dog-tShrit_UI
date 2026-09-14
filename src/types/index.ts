@@ -1,3 +1,4 @@
+import type { ComponentType, ReactNode } from "react";
 
 
 export interface IResponse<T>{
@@ -9,13 +10,13 @@ export interface IResponse<T>{
 
 
 export interface ISidebarItem {
-    title: string;
-    items:{
-            title: string;
-            url:string;
-            component?:ComponentType;
-        }[]
-}
+  title: string;
 
+  items: {
+    title: string;
+    url: string;
+    component?: ComponentType;
+  }[];
+}
 
 export type IRole  = "ADMIN" | "USER" 
