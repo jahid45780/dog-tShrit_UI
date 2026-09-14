@@ -22,7 +22,8 @@ import type { ILogin } from "@/types/auth.types";
                 url:"/auth/login",
                 method:"POST",
                 data:userInfo
-            })
+            }),
+             invalidatesTags: ["USER"],
         }),
       
 
