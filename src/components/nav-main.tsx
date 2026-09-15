@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, PawPrint } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, Links } from "react-router-dom";
 
 interface NavItem {
   title: string;
@@ -28,9 +28,11 @@ export function NavMain({ items }: NavMainProps) {
   };
 
   return (
+    
     <div className="w-full space-y-3 px-2">
 
       {/* ================= HEADER ================= */}
+      <Link to={"/"} >
       <div
         className="
           group relative overflow-hidden rounded-2xl
@@ -99,6 +101,7 @@ export function NavMain({ items }: NavMainProps) {
           "
         />
       </div>
+        </Link>
 
 
       {/* ================= NAVIGATION ================= */}
