@@ -3,7 +3,7 @@ import type { ISidebarItem } from "@/types";
 
 export const userSidebarItems:ISidebarItem[] = [
     {
-    title: "Transactions",
+    title: "My Collection",
     items: [
       
 

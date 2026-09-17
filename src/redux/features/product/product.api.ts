@@ -1,4 +1,5 @@
 import { baseApi } from "@/redux/baseApi"
+import type { IProduct, IProductResponse } from "@/types";
 
 
 
@@ -15,10 +16,62 @@ ProductCreate: build.mutation({
   invalidatesTags: ["PRODUCT"],
 }),
 
+
+  GetAllProduct: build.query<
+  IProductResponse,
+  {
+    search?: string;
+    category?: string;
+    sort?: string;
+    page?: number;
+    limit?: number;
+  }
+>({
+  query: ({
+    search = "",
+    category = "All",
+    sort = "newest",
+    page = 1,
+    limit = 12,
+  }) => ({
+    url: "/product/get-all-product",
+    method: "GET",
+
+    params: {
+      search,
+      category,
+      sort,
+      page,
+      limit,
+    },
+  }),
+
+  providesTags: ["PRODUCT"],
+}),
+
+
+ 
+GetSingleProduct: build.query<
+  {
+    data: IProduct;
+  },
+  string
+>({
+  query: (id) => ({
+    url: `/product/${id}`,
+    method: "GET",
+  }),
+  providesTags: ["PRODUCT"],
+}),
+
+
+ 
           
     })
 })
 
 export const { 
-  useProductCreateMutation
+  useProductCreateMutation,
+  useGetAllProductQuery,
+  useGetSingleProductQuery
 } = ProductApi

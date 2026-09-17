@@ -1,819 +1,607 @@
-
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
   Heart,
-  PawPrint,
+  Package,
   Search,
   SlidersHorizontal,
-  Sparkles,
+  X,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-
-type Collection = {
-  id: number;
-  name: string;
-  slug: string;
-  category: string;
-  description: string;
-  petCount: number;
-  image: string;
-  badge?: string;
-};
-
-/* =====================================================
-   DUMMY COLLECTION DATA
-===================================================== */
-
-const collections: Collection[] = [
-  {
-    id: 1,
-    name: "Dog Lovers",
-    slug: "dog-lovers",
-    category: "Dogs",
-    description:
-      "Cute and stylish collections made for every proud dog parent.",
-    petCount: 24,
-    image:
-      "https://images.unsplash.com/photo-1552053831-71594a27632d?w=900",
-    badge: "Popular",
-  },
-
-  {
-    id: 2,
-    name: "Cat Lovers",
-    slug: "cat-lovers",
-    category: "Cats",
-    description:
-      "Perfect designs for people who believe cats run the world.",
-    petCount: 18,
-    image:
-      "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=900",
-    badge: "Trending",
-  },
-
-  {
-    id: 3,
-    name: "Puppy Collection",
-    slug: "puppy-collection",
-    category: "Dogs",
-    description:
-      "Playful designs inspired by the cutest little paws.",
-    petCount: 16,
-    image:
-      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=900",
-    badge: "New",
-  },
-
-  {
-    id: 4,
-    name: "Kitten Collection",
-    slug: "kitten-collection",
-    category: "Cats",
-    description:
-      "Sweet and adorable designs inspired by playful kittens.",
-    petCount: 12,
-    image:
-      "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=900",
-    badge: "New",
-  },
-
-  {
-    id: 5,
-    name: "Paw Collection",
-    slug: "paw-collection",
-    category: "Paw",
-    description:
-      "Minimal and beautiful paw-inspired designs for pet lovers.",
-    petCount: 21,
-    image:
-      "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=900",
-    badge: "Popular",
-  },
-
-  {
-    id: 6,
-    name: "Funny Pets",
-    slug: "funny-pets",
-    category: "Funny",
-    description:
-      "Fun, funny and playful designs that every pet lover will enjoy.",
-    petCount: 14,
-    image:
-      "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=900",
-    badge: "Fun",
-  },
-
-  {
-    id: 7,
-    name: "Pet Parents",
-    slug: "pet-parents",
-    category: "Lifestyle",
-    description:
-      "Celebrate the special bond between pets and their humans.",
-    petCount: 19,
-    image:
-      "https://images.unsplash.com/photo-1601758174114-e711c0cbaa69?w=900",
-    badge: "Favorite",
-  },
-
-  {
-    id: 8,
-    name: "Best Friends",
-    slug: "best-friends",
-    category: "Lifestyle",
-    description:
-      "Because the best friendships come with four paws.",
-    petCount: 15,
-    image:
-      "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=900",
-    badge: "Love",
-  },
-
-  {
-    id: 9,
-    name: "Pet Mom",
-    slug: "pet-mom",
-    category: "Lifestyle",
-    description:
-      "Special designs for proud pet moms everywhere.",
-    petCount: 11,
-    image:
-      "https://images.unsplash.com/photo-1601758124510-52d02ddb7cbd?w=900",
-    badge: "New",
-  },
-
-  {
-    id: 10,
-    name: "Pet Dad",
-    slug: "pet-dad",
-    category: "Lifestyle",
-    description:
-      "For the dads who proudly carry the title of pet dad.",
-    petCount: 13,
-    image:
-      "https://images.unsplash.com/photo-1544568100-847a948585b9?w=900",
-    badge: "Popular",
-  },
-];
-
-/* =====================================================
-   FILTER CATEGORIES
-===================================================== */
+import { cn } from "@/lib/utils";
+import { useGetAllProductQuery } from "@/redux/features/product/product.api";
 
 const categories = [
   "All",
-  "Dogs",
-  "Cats",
-  "Paw",
-  "Funny",
-  "Lifestyle",
+  "Dog Lovers",
+  "Cat Lovers",
+  "Paw Collection",
+  "Custom",
 ];
 
-/* =====================================================
-   COLLECTION PAGE
-===================================================== */
+const sortOptions = [
+  {
+    label: "Newest",
+    value: "newest",
+  },
+  {
+    label: "Price: Low to High",
+    value: "price-low",
+  },
+  {
+    label: "Price: High to Low",
+    value: "price-high",
+  },
+  {
+    label: "Most Popular",
+    value: "popular",
+  },
+];
 
 const Collections = () => {
-  const [activeCategory, setActiveCategory] =
-    useState("All");
-
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
-  const [sortBy, setSortBy] =
-    useState("Popular");
+  const [category, setCategory] = useState("All");
+  const [sort, setSort] = useState("newest");
+  const [page, setPage] = useState(1);
 
-  const [currentPage, setCurrentPage] =
-    useState(1);
+  // 6 products per page
+  const limit = 6;
 
-  const itemsPerPage = 6;
+  // Search debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 400);
 
-  /* ===================================================
-     SEARCH + FILTER + SORT
-  =================================================== */
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-  const filteredCollections = useMemo(() => {
-    let result = collections.filter(
-      (collection) => {
-        const matchesCategory =
-          activeCategory === "All" ||
-          collection.category ===
-            activeCategory;
+  const { data, isLoading, isFetching, isError } =
+    useGetAllProductQuery({
+      search,
+      category,
+      sort,
+      page,
+      limit,
+    });
 
-        const matchesSearch =
-          collection.name
-            .toLowerCase()
-            .includes(search.toLowerCase()) ||
-          collection.description
-            .toLowerCase()
-            .includes(search.toLowerCase());
+  const products = data?.data ?? [];
 
-        return (
-          matchesCategory &&
-          matchesSearch
-        );
-      }
-    );
+  const total = data?.meta?.total ?? 0;
+  const totalPage = data?.meta?.totalPage ?? 1;
 
-    if (sortBy === "Name") {
-      result = [...result].sort((a, b) =>
-        a.name.localeCompare(b.name)
-      );
-    }
+  const hasFilters =
+    searchInput.trim().length > 0 ||
+    category !== "All" ||
+    sort !== "newest";
 
-    if (sortBy === "Most Products") {
-      result = [...result].sort(
-        (a, b) => b.petCount - a.petCount
-      );
-    }
-
-    return result;
-  }, [activeCategory, search, sortBy]);
-
-  /* ===================================================
-     PAGINATION
-  =================================================== */
-
-  const totalPages = Math.ceil(
-    filteredCollections.length / itemsPerPage
-  );
-
-  const startIndex =
-    (currentPage - 1) * itemsPerPage;
-
-  const paginatedCollections =
-    filteredCollections.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-
-  /* ===================================================
-     RESET PAGE
-  =================================================== */
-
-  const handleCategoryChange = (
-    category: string
-  ) => {
-    setActiveCategory(category);
-    setCurrentPage(1);
+  const clearFilters = () => {
+    setSearchInput("");
+    setSearch("");
+    setCategory("All");
+    setSort("newest");
+    setPage(1);
   };
 
-  const handleSearch = (
-    value: string
-  ) => {
-    setSearch(value);
-    setCurrentPage(1);
+  const getDiscount = (price: number, oldPrice?: number) => {
+    if (!oldPrice || oldPrice <= price) {
+      return 0;
+    }
+
+    return Math.round(((oldPrice - price) / oldPrice) * 100);
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+
+    if (totalPage <= 7) {
+      for (let i = 1; i <= totalPage; i++) {
+        pages.push(i);
+      }
+
+      return pages;
+    }
+
+    pages.push(1);
+
+    if (page > 3) {
+      pages.push("...");
+    }
+
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPage - 1, page + 1);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (page < totalPage - 2) {
+      pages.push("...");
+    }
+
+    pages.push(totalPage);
+
+    return pages;
   };
 
   return (
     <main className="min-h-screen bg-background">
-      {/* =================================================
-          HERO
-      ================================================= */}
-
-      <section className="relative overflow-hidden border-b bg-muted/30">
-        {/* Background decorations */}
-
-        <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-
-        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-
-        <div className="container relative mx-auto px-4 py-16 text-center md:py-20">
-          <Badge className="mb-5 rounded-full px-4 py-1.5">
-            <PawPrint className="mr-2 h-4 w-4" />
-            Explore Atnamira
-          </Badge>
-
-          <h1 className="text-4xl font-black tracking-tight md:text-6xl">
-            Discover Our
-            <span className="block text-primary">
-              Pet Collections 🐾
+      {/* ================= HERO ================= */}
+      <section className="relative overflow-hidden border-b bg-gradient-to-br from-primary/10 via-background to-secondary/20">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="mb-4 inline-flex rounded-full border bg-background/80 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary shadow-sm">
+              AtNamira Collection
             </span>
-          </h1>
 
-          <p className="mx-auto mt-5 max-w-2xl text-muted-foreground md:text-lg">
-            Explore collections inspired by the pets we
-            love. Find your favorite style and wear your
-            pet-loving personality with pride.
-          </p>
-        </div>
-      </section>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Find Something Your
+              <span className="block text-primary">
+                Pet-Loving Heart Will Love
+              </span>
+            </h1>
 
-      {/* =================================================
-          FEATURED COLLECTION
-      ================================================= */}
-
-      <section className="container mx-auto px-4 py-12">
-        <div
-          className="
-            group relative overflow-hidden
-            rounded-3xl
-            bg-muted
-          "
-        >
-          <img
-            src="https://images.unsplash.com/photo-1558788353-f76d92427f16?w=1400"
-            alt="Featured pet collection"
-            className="
-              h-[360px] w-full object-cover
-              transition-transform duration-700
-              group-hover:scale-105
-              md:h-[430px]
-            "
-          />
-
-          {/* Overlay */}
-
-          <div className="absolute inset-0 bg-black/45" />
-
-          <div className="absolute inset-0 flex items-center">
-            <div className="max-w-xl px-6 text-white md:px-12">
-              <Badge
-                variant="secondary"
-                className="mb-4 rounded-full"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Featured Collection
-              </Badge>
-
-              <h2 className="text-3xl font-black md:text-5xl">
-                Made for
-                <span className="block">
-                  Pet Lovers ❤️
-                </span>
-              </h2>
-
-              <p className="mt-4 max-w-lg text-sm text-white/80 md:text-base">
-                Discover our most-loved pet-inspired
-                designs created for people who treat their
-                pets like family.
-              </p>
-
-              <Button
-                size="lg"
-                className="mt-6 rounded-full"
-              >
-                Explore Collection
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Explore our collection of pet-inspired products made for people
+              who love their furry friends.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* =================================================
-          COLLECTION HEADER
-      ================================================= */}
-
-      <section className="container mx-auto px-4 pb-14 pt-4">
-        <div className="mb-7">
-          <p className="text-sm font-bold uppercase tracking-wider text-primary">
-            Browse
-          </p>
-
-          <h2 className="mt-2 text-2xl font-black md:text-3xl">
-            All Collections
-          </h2>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            Find the collection that matches your pet-loving
-            personality.
-          </p>
-        </div>
-
-        {/* =================================================
-            SEARCH + SORT
-        ================================================= */}
-
-        <div className="rounded-2xl border bg-card p-4 shadow-sm">
+      {/* ================= COLLECTION ================= */}
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* ================= FILTER BOX ================= */}
+        <div className="mb-8 rounded-2xl border bg-card p-4 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             {/* Search */}
-
             <div className="relative w-full lg:max-w-md">
-              <Search
-                className="
-                  absolute left-3 top-1/2
-                  h-4 w-4
-                  -translate-y-1/2
-                  text-muted-foreground
-                "
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search products..."
+                className="h-11 w-full rounded-xl border bg-background pl-10 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
 
-              <Input
-                value={search}
-                onChange={(e) =>
-                  handleSearch(e.target.value)
-                }
-                placeholder="Search collections..."
-                className="h-11 rounded-xl pl-10"
-              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             {/* Sort */}
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="rounded-xl"
-              >
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
+            <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
+                <SlidersHorizontal className="h-4 w-4" />
+                Sort:
+              </div>
 
               <select
-                value={sortBy}
+                value={sort}
                 onChange={(e) => {
-                  setSortBy(e.target.value);
-                  setCurrentPage(1);
+                  setSort(e.target.value);
+                  setPage(1);
                 }}
-                className="
-                  h-10 rounded-xl
-                  border bg-background
-                  px-3 text-sm
-                  outline-none
-                  focus:ring-2
-                  focus:ring-primary
-                "
+                className="h-11 min-w-[190px] rounded-xl border bg-background px-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
-                <option>Popular</option>
-                <option>Name</option>
-                <option>Most Products</option>
+                {sortOptions.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
-          {/* =================================================
-              CATEGORY FILTER
-          ================================================= */}
-
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            {categories.map(
-              (category) => (
-                <Button
-                  key={category}
-                  variant={
-                    activeCategory === category
-                      ? "default"
-                      : "outline"
-                  }
-                  className="shrink-0 rounded-full"
-                  onClick={() =>
-                    handleCategoryChange(
-                      category
-                    )
-                  }
-                >
-                  {category}
-                </Button>
-              )
-            )}
-          </div>
-        </div>
-
-        {/* =================================================
-            RESULT INFO
-        ================================================= */}
-
-        <div className="mt-8 flex items-end justify-between">
-          <div>
-            <h3 className="text-xl font-bold">
-              Collections
-            </h3>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              Showing{" "}
-              {paginatedCollections.length}{" "}
-              of{" "}
-              {filteredCollections.length}{" "}
-              collections
-            </p>
-          </div>
-        </div>
-
-        {/* =================================================
-            COLLECTION GRID
-        ================================================= */}
-
-        {paginatedCollections.length > 0 ? (
-          <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {paginatedCollections.map(
-              (collection) => (
-                <CollectionCard
-                  key={collection.id}
-                  collection={collection}
-                />
-              )
-            )}
-          </div>
-        ) : (
-          /* =================================================
-             EMPTY STATE
-          ================================================= */
-
-          <div
-            className="
-              mt-7 flex min-h-72
-              flex-col items-center
-              justify-center
-              rounded-2xl
-              border border-dashed
-            "
-          >
-            <Search className="mb-4 h-10 w-10 text-muted-foreground" />
-
-            <h3 className="text-lg font-bold">
-              No collections found
-            </h3>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              Try another search or category.
-            </p>
-
-            <Button
-              className="mt-5 rounded-full"
-              onClick={() => {
-                setSearch("");
-                setActiveCategory("All");
-                setCurrentPage(1);
-              }}
-            >
-              Clear Filters
-            </Button>
-          </div>
-        )}
-
-        {/* =================================================
-            PAGINATION
-        ================================================= */}
-
-        {totalPages > 1 && (
-          <div className="mt-10 flex items-center justify-center gap-2">
-            {/* Previous */}
-
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={currentPage === 1}
-              onClick={() =>
-                setCurrentPage(
-                  (page) => page - 1
-                )
-              }
-              className="rounded-xl"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            {/* Pages */}
-
-            {Array.from(
-              { length: totalPages },
-              (_, index) => index + 1
-            ).map((page) => (
-              <Button
-                key={page}
-                variant={
-                  currentPage === page
-                    ? "default"
-                    : "outline"
-                }
-                onClick={() =>
-                  setCurrentPage(page)
-                }
-                className="h-10 w-10 rounded-xl"
+          {/* Categories */}
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {categories.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  setCategory(item);
+                  setPage(1);
+                }}
+                className={cn(
+                  "whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-all",
+                  category === item
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : "bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                )}
               >
-                {page}
-              </Button>
+                {item}
+              </button>
             ))}
+          </div>
 
-            {/* Next */}
+          {/* Active Filters */}
+          {hasFilters && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
+              <span className="text-xs text-muted-foreground">
+                Active filters:
+              </span>
 
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={
-                currentPage === totalPages
-              }
-              onClick={() =>
-                setCurrentPage(
-                  (page) => page + 1
-                )
-              }
-              className="rounded-xl"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              {searchInput && (
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                  Search: {searchInput}
+                </span>
+              )}
+
+              {category !== "All" && (
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                  {category}
+                </span>
+              )}
+
+              {sort !== "newest" && (
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                  {sortOptions.find(
+                    (item) => item.value === sort,
+                  )?.label}
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="ml-auto text-xs font-semibold text-destructive hover:underline"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ================= RESULT HEADER ================= */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+              Our Collections
+            </h2>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isFetching
+                ? "Updating products..."
+                : `${total} products found`}
+            </p>
+          </div>
+
+          {isFetching && (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          )}
+        </div>
+
+        {/* ================= LOADING ================= */}
+        {isLoading && (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="overflow-hidden rounded-2xl border bg-card"
+              >
+                <div className="aspect-[4/3] animate-pulse bg-muted" />
+
+                <div className="space-y-3 p-3.5">
+                  <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                  <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+                  <div className="h-5 w-1/3 animate-pulse rounded bg-muted" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
-      </section>
 
-      {/* =================================================
-          BOTTOM CTA
-      ================================================= */}
+        {/* ================= ERROR ================= */}
+        {!isLoading && isError && (
+          <div className="flex min-h-[350px] flex-col items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/5 px-6 text-center">
+            <div className="mb-4 rounded-full bg-destructive/10 p-4">
+              <Package className="h-8 w-8 text-destructive" />
+            </div>
 
-      <section className="border-t bg-muted/30">
-        <div className="container mx-auto px-4 py-16 text-center">
-          <div
-            className="
-              mx-auto flex h-14 w-14
-              items-center justify-center
-              rounded-2xl
-              bg-primary/10
-              text-primary
-            "
-          >
-            <PawPrint className="h-7 w-7" />
+            <h3 className="text-lg font-semibold">
+              Failed to load products
+            </h3>
+
+            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+              Something went wrong while loading the collection.
+              Please try again.
+            </p>
           </div>
+        )}
 
-          <h2 className="mt-5 text-3xl font-black">
-            Can't Find Your Perfect Style?
-          </h2>
+        {/* ================= EMPTY ================= */}
+        {!isLoading && !isError && products.length === 0 && (
+          <div className="flex min-h-[350px] flex-col items-center justify-center rounded-2xl border bg-card px-6 text-center">
+            <div className="mb-4 rounded-full bg-muted p-4">
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
 
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Create a custom T-shirt inspired by your favorite
-            pet and make something truly yours.
-          </p>
+            <h3 className="text-lg font-semibold">
+              No products found
+            </h3>
 
-          <Button
-            size="lg"
-            className="mt-6 rounded-full px-8"
-          >
-            Create Custom T-Shirt
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+              We couldn't find any products matching your search or
+              filters.
+            </p>
+
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-5 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ================= PRODUCTS ================= */}
+        {!isLoading && !isError && products.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map((product) => {
+                const discount = getDiscount(
+                  product.price,
+                  product.oldPrice,
+                );
+
+                return (
+                  <article
+                    key={product._id}
+                    className="group relative overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  >
+                    {/* Product Image */}
+                    <Link
+                      to={`/product/${product._id}`}
+                      className="relative block aspect-[4/3] overflow-hidden bg-muted"
+                    >
+                      {/* Main Image */}
+                      <img
+                        src={product.images.main}
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105 group-hover:opacity-0"
+                      />
+
+                      {/* Hover Image */}
+                      {product.images.hover && (
+                        <img
+                          src={product.images.hover}
+                          alt={`${product.name} hover`}
+                          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-500 group-hover:scale-105 group-hover:opacity-100"
+                        />
+                      )}
+
+                      {/* Badge */}
+                      {product.badge && (
+                        <span className="absolute left-3 top-3 rounded-full bg-background/95 px-3 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm backdrop-blur">
+                          {product.badge}
+                        </span>
+                      )}
+
+                      {/* Discount */}
+                      {discount > 0 && (
+                        <span className="absolute right-3 top-3 rounded-full bg-destructive px-3 py-1 text-[10px] font-bold text-destructive-foreground shadow-sm">
+                          -{discount}%
+                        </span>
+                      )}
+
+                      {/* Wishlist */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                        }}
+                        className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/90 text-muted-foreground opacity-0 shadow-md backdrop-blur transition-all duration-300 hover:text-destructive group-hover:opacity-100"
+                        aria-label="Add to wishlist"
+                      >
+                        <Heart className="h-4 w-4" />
+                      </button>
+                    </Link>
+
+                    {/* Content */}
+                    <div className="p-3.5">
+                      {/* Category */}
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                        {product.category}
+                      </p>
+
+                      {/* Product Name */}
+                      <Link
+                        to={`/product/${product.slug}`}
+                        className="line-clamp-1 text-base font-semibold transition-colors hover:text-primary"
+                      >
+                        {product.name}
+                      </Link>
+
+                      {/* Description */}
+                      <p className="mt-1.5 line-clamp-1 text-xs leading-5 text-muted-foreground">
+                        {product.description}
+                      </p>
+
+                      {/* Price */}
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="text-xl font-bold">
+                          ${product.price}
+                        </span>
+
+                        {product.oldPrice &&
+                          product.oldPrice > product.price && (
+                            <span className="text-xs text-muted-foreground line-through">
+                              ${product.oldPrice}
+                            </span>
+                          )}
+                      </div>
+
+                      {/* Colors */}
+                      {product.colors?.length > 0 && (
+                        <div className="mt-3">
+                          <p className="mb-1.5 text-[11px] font-semibold text-muted-foreground">
+                            Colors
+                          </p>
+
+                          <div className="flex flex-wrap gap-1">
+                            {product.colors
+                              .slice(0, 4)
+                              .map((color) => (
+                                <span
+                                  key={color}
+                                  className="rounded-md border bg-muted/40 px-1.5 py-0.5 text-[10px]"
+                                >
+                                  {color}
+                                </span>
+                              ))}
+
+                            {product.colors.length > 4 && (
+                              <span className="rounded-md border bg-muted/40 px-1.5 py-0.5 text-[10px]">
+                                +{product.colors.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sizes */}
+                      {product.sizes?.length > 0 && (
+                        <div className="mt-2.5">
+                          <p className="mb-1.5 text-[11px] font-semibold text-muted-foreground">
+                            Sizes
+                          </p>
+
+                          <div className="flex flex-wrap gap-1">
+                            {product.sizes
+                              .slice(0, 5)
+                              .map((size) => (
+                                <span
+                                  key={size}
+                                  className="rounded-md border px-1.5 py-0.5 text-[10px] font-medium"
+                                >
+                                  {size}
+                                </span>
+                              ))}
+
+                            {product.sizes.length > 5 && (
+                              <span className="rounded-md border px-1.5 py-0.5 text-[10px]">
+                                +{product.sizes.length - 5}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bottom */}
+                      <div className="mt-4 flex items-center justify-between gap-3 border-t pt-3">
+                        <div>
+                          {product.stock > 0 ? (
+                            <p className="text-[11px] font-medium text-green-600">
+                              {product.stock} in stock
+                            </p>
+                          ) : (
+                            <p className="text-[11px] font-medium text-destructive">
+                              Out of stock
+                            </p>
+                          )}
+                        </div>
+
+                        <Link
+                          to={`/product/${product._id}`}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition hover:bg-primary/90"
+                        >
+                          View Product
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {/* ================= PAGINATION ================= */}
+            {totalPage > 1 && (
+              <div className="mt-10 flex flex-col items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  {/* Previous */}
+                  <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() =>
+                      setPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border bg-background transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  {/* Page Numbers */}
+                  {getPageNumbers().map((item, index) =>
+                    item === "..." ? (
+                      <span
+                        key={`dots-${index}`}
+                        className="flex h-9 w-7 items-center justify-center text-sm text-muted-foreground"
+                      >
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setPage(item as number)}
+                        className={cn(
+                          "flex h-9 min-w-9 items-center justify-center rounded-lg border px-2 text-xs font-medium transition",
+                          page === item
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "bg-background hover:bg-muted",
+                        )}
+                      >
+                        {item}
+                      </button>
+                    ),
+                  )}
+
+                  {/* Next */}
+                  <button
+                    type="button"
+                    disabled={page === totalPage}
+                    onClick={() =>
+                      setPage((prev) =>
+                        Math.min(prev + 1, totalPage),
+                      )
+                    }
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border bg-background transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Page {page} of {totalPage}
+                </p>
+              </div>
+            )}
+          </>
+        )}
       </section>
     </main>
   );
 };
 
-/* =====================================================
-   COLLECTION CARD
-===================================================== */
-
-const CollectionCard = ({
-  collection,
-}: {
-  collection: Collection;
-}) => {
-  const [isFavorite, setIsFavorite] =
-    useState(false);
-
-  return (
-    <div
-      className="
-        group overflow-hidden
-        rounded-2xl border
-        bg-card
-        transition-all duration-300
-        hover:-translate-y-1
-        hover:shadow-2xl
-      "
-    >
-      {/* =================================================
-          IMAGE
-      ================================================= */}
-
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-        <img
-          src={collection.image}
-          alt={collection.name}
-          className="
-            h-full w-full
-            object-cover
-            transition-transform
-            duration-700
-            group-hover:scale-110
-          "
-        />
-
-        {/* Image overlay */}
-
-        <div
-          className="
-            absolute inset-0
-            bg-gradient-to-t
-            from-black/50
-            via-transparent
-            to-transparent
-            opacity-70
-          "
-        />
-
-        {/* Badge */}
-
-        {collection.badge && (
-          <Badge
-            className="
-              absolute left-4 top-4
-              rounded-full
-              px-3 py-1
-            "
-          >
-            {collection.badge}
-          </Badge>
-        )}
-
-        {/* Wishlist */}
-
-        <button
-          type="button"
-          onClick={() =>
-            setIsFavorite(!isFavorite)
-          }
-          className="
-            absolute right-4 top-4
-            flex h-10 w-10
-            items-center justify-center
-            rounded-full
-            bg-background/90
-            shadow-lg
-            backdrop-blur
-            transition-all
-            hover:scale-110
-          "
-          aria-label="Add to wishlist"
-        >
-          <Heart
-            className={`
-              h-5 w-5
-              transition-all
-              ${
-                isFavorite
-                  ? "fill-current text-red-500"
-                  : ""
-              }
-            `}
-          />
-        </button>
-
-        {/* Pet Count */}
-
-        <div
-          className="
-            absolute bottom-4 left-4
-            rounded-full
-            bg-black/50
-            px-3 py-1
-            text-xs font-semibold
-            text-white
-            backdrop-blur-sm
-          "
-        >
-          {collection.petCount} Designs
-        </div>
-      </div>
-
-      {/* =================================================
-          CONTENT
-      ================================================= */}
-
-      <div className="p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-primary">
-          {collection.category}
-        </p>
-
-        <h3 className="mt-1 text-xl font-black">
-          {collection.name}
-        </h3>
-
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-          {collection.description}
-        </p>
-
-        {/* Explore */}
-
-        <Button
-          variant="ghost"
-          className="
-            mt-4
-            w-full
-            justify-between
-            rounded-xl
-            px-3
-            hover:bg-primary/10
-          "
-        >
-          Explore Collection
-
-          <ArrowRight
-            className="
-              h-4 w-4
-              transition-transform
-              group-hover:translate-x-1
-            "
-          />
-        </Button>
-      </div>
-    </div>
-  );
-};
-
 export default Collections;
-
