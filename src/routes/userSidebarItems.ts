@@ -1,4 +1,7 @@
+
+import MyCart from "@/components/modules/user/MyCart";
 import type { ISidebarItem } from "@/types";
+
 
 
 export const userSidebarItems:ISidebarItem[] = [
@@ -10,7 +13,7 @@ export const userSidebarItems:ISidebarItem[] = [
        {
         title: "My Card",
         url: "/user/my-card",
-        // component: Profile,
+        component: MyCart
       },
     ],
   },
