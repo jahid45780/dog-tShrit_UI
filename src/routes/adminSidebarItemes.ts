@@ -1,4 +1,5 @@
 import AddProduct from "@/components/modules/admin/AddProduct";
+import AdminDashboard from "@/components/modules/admin/AdminDashboard";
 import type { ISidebarItem } from "@/types";
 
 
@@ -9,17 +10,30 @@ export const adminSidebarItems:ISidebarItem[] = [
       {
         title: "Analytics",
         url: "/admin/analytics",
-        // component: Analytics,
+        component: AdminDashboard,
       },
   
     ],
   },
   {
-    title: "Atnamina Management",
+    title: "Product Management",
     items: [
       {
         title: "Add Product",
         url: "/admin/add-product",
+        component: AddProduct,
+      },
+    
+   
+    ],
+  },
+
+   {
+    title: "User Management",
+    items: [
+      {
+        title: "Users",
+        url: "/admin/all-users",
         component: AddProduct,
       },
     

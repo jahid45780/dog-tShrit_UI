@@ -16,6 +16,12 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { adminSidebarItems } from "./adminSidebarItemes";
 import { userSidebarItems } from "./userSidebarItems";
 import CollectionsDetalis from "@/pages/CollectionsDetalis";
+import Checkout from "@/pages/Checkout";
+import PaymentSuccess from "@/pages/payment/PaymentSuccess";
+import PaymentPending from "@/pages/payment/PaymentPending";
+import PaymentCancel from "@/pages/payment/PaymentCancel";
+import MyOrders from "@/components/modules/user/MyOrders";
+import MyOrderDetails from "@/components/modules/user/MyOrderDetails";
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +44,23 @@ export const router = createBrowserRouter([
         Component: CollectionsDetalis,
         path: "/product/:id",
       },
+      {
+        Component: Checkout,
+        path: "/checkout"
+      },
+      {
+        Component: PaymentSuccess,
+        path:"/payment/success"
+      },
+        {
+        Component: PaymentPending,
+        path:"/payment/pending"
+      },
+      {
+        Component: PaymentCancel,
+        path:"/payment/cancel"
+      },
+     
     ],
   },
 
@@ -57,6 +80,10 @@ export const router = createBrowserRouter([
     Component: withAuth(DashboardLayout, role.USER as IRole),
     path: "/user",
     children: [
+       {
+        index: true,
+        element: <Navigate to="/user/my-dashboard" replace />,
+      },
       ...generateRoutes(userSidebarItems),
     ],
   },
@@ -70,4 +97,12 @@ export const router = createBrowserRouter([
     Component: Register,
     path: "/register",
   },
+   {
+        Component: MyOrders,
+        path:"/my-bookings"
+   },
+    {
+        Component: MyOrderDetails,
+        path:"/my-bookings/:id"
+   }
 ]);

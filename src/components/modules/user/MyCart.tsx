@@ -596,15 +596,14 @@ const MyCart = () => {
 
                   {/* CHECKOUT */}
 
-                  <Button
-                    
-                    className="mt-6 h-13 w-full rounded-xl bg-gray-950 text-white hover:bg-orange-600"
-                  >
-                    <Link to="/checkout">
-                      Proceed to Checkout
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+                <Button
+  className="mt-6 h-13 w-full rounded-xl bg-gray-950 text-white hover:bg-orange-600"
+>
+  <Link to="/checkout">
+    Proceed to Checkout
+    <ChevronRight className="ml-2 h-4 w-4" />
+  </Link>
+</Button>
 
                   {/* TRUST */}
 
@@ -737,15 +736,10 @@ const AtnamiraHeader = () => {
         {/* CART */}
 
         <Link
-          to="/my-cart"
+          to="/user/my-card"
           className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 text-gray-700 transition hover:bg-orange-50 hover:text-orange-600"
         >
           <ShoppingBag className="h-5 w-5" />
-
-          {/*
-            Cart count can later be connected
-            to Redux/RTK Query globally.
-          */}
 
           <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-black text-white">
             🛒

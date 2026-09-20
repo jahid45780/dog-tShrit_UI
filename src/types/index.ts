@@ -128,3 +128,56 @@ export interface ICartResponse {
   message: string;
   data: ICart;
 }
+
+
+export interface IBookingItem {
+  product: string;
+  name: string;
+  quantity: number;
+  price: number;
+  color: string;
+  size: string;
+  subtotal: number;
+}
+
+export interface IShippingAddress {
+  name: string;
+  phone: string;
+  address: string;
+}
+
+export interface IBooking {
+  _id: string;
+  user: string;
+
+  items: IBookingItem[];
+
+  shippingAddress: IShippingAddress;
+
+  totalAmount: number;
+
+  paymentStatus: "PENDING" | "PAID" | "FAILED";
+
+  bookingStatus:
+    | "PENDING"
+    | "CONFIRMED"
+    | "CANCELLED";
+
+  stripeSessionId?: string;
+
+  stripePaymentIntentId?: string;
+
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ICreateBookingResponse {
+  success: boolean;
+  message: string;
+
+  data: {
+    booking: IBooking;
+
+    checkoutUrl: string;
+  };
+}
