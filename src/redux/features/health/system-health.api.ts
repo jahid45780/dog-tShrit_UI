@@ -6,14 +6,14 @@ export const systemHealthApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getSystemHealth: build.query<ISystemHealthResponse, void>({
       query: () => ({
-        url: "/admin/system-health",
+        url: "/system-health",
         method: "GET",
       }),
 
       providesTags: ["HEALTH"],
     }),
 
-    
+
   }),
 });
 

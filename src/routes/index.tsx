@@ -22,6 +22,7 @@ import PaymentPending from "@/pages/payment/PaymentPending";
 import PaymentCancel from "@/pages/payment/PaymentCancel";
 import MyOrders from "@/components/modules/user/MyOrders";
 import MyOrderDetails from "@/components/modules/user/MyOrderDetails";
+import Profile from "@/pages/Profile";
 
 export const router = createBrowserRouter([
   {
@@ -59,6 +60,11 @@ export const router = createBrowserRouter([
       {
         Component: PaymentCancel,
         path:"/payment/cancel"
+      },
+       
+      {
+        Component: Profile,
+        path:"/profile"
       },
      
     ],
