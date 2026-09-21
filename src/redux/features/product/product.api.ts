@@ -26,6 +26,7 @@ ProductCreate: build.mutation({
     page?: number;
     limit?: number;
   }
+
 >({
   query: ({
     search = "",
@@ -65,6 +66,20 @@ GetSingleProduct: build.query<
 }),
 
 
+  DeleteProduct: build.mutation<
+      {
+        data: IProduct;
+      },
+      string
+    >({
+      query: (id) => ({
+        url: `/product/${id}`,
+        method: "DELETE",
+      }),
+
+      invalidatesTags: ["PRODUCT"],
+    }),
+
  
           
     })
@@ -73,5 +88,6 @@ GetSingleProduct: build.query<
 export const { 
   useProductCreateMutation,
   useGetAllProductQuery,
-  useGetSingleProductQuery
+  useGetSingleProductQuery,
+  useDeleteProductMutation
 } = ProductApi
