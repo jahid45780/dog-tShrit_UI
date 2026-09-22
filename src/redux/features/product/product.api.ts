@@ -23,6 +23,7 @@ ProductCreate: build.mutation({
     search?: string;
     category?: string;
     sort?: string;
+    badge?: string;
     page?: number;
     limit?: number;
   }
@@ -32,6 +33,7 @@ ProductCreate: build.mutation({
     search = "",
     category = "All",
     sort = "newest",
+    badge = "Trending",
     page = 1,
     limit = 12,
   }) => ({
@@ -41,12 +43,22 @@ ProductCreate: build.mutation({
     params: {
       search,
       category,
+      badge,
       sort,
       page,
       limit,
     },
   }),
 
+  providesTags: ["PRODUCT"],
+}),
+
+
+GetBestSellingToday: build.query<IProductResponse, void>({
+  query: () => ({
+    url: "/product/getBestSellingToday",
+    method: "GET",
+  }),
   providesTags: ["PRODUCT"],
 }),
 
@@ -89,5 +101,6 @@ export const {
   useProductCreateMutation,
   useGetAllProductQuery,
   useGetSingleProductQuery,
-  useDeleteProductMutation
+  useDeleteProductMutation,
+  useGetBestSellingTodayQuery
 } = ProductApi
