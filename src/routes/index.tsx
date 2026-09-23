@@ -25,6 +25,8 @@ import MyOrderDetails from "@/components/modules/user/MyOrderDetails";
 import Profile from "@/pages/Profile";
 import Unauthorized from "@/components/modules/Authorization/Unauthorized";
 import NotFound from "@/components/modules/Authorization/NotFound";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
 
 export const router = createBrowserRouter([
   {
@@ -68,6 +70,15 @@ export const router = createBrowserRouter([
         Component: Profile,
         path:"/profile"
       },
+       {
+        Component: About,
+        path:"/about"
+      },
+         {
+        Component: Contact,
+        path:"/contact"
+      },
+
 
        
     ],

@@ -133,6 +133,7 @@ const Checkout = () => {
         error?.data?.message ||
           "Unable to create booking"
       );
+       navigate("/profile");
     }
   };
 

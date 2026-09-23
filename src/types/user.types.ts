@@ -68,4 +68,7 @@ export interface IOrdersResponse {
 export interface IOrdersQuery {
   page: number;
   limit: number;
+  search?: string;
+  paymentStatus?: string;
+  bookingStatus?: string;
 }

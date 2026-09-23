@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   ChevronRight,
   Clock3,
   Package,
