@@ -1,4 +1,3 @@
-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -7,16 +6,14 @@ import {
   User,
   Mail,
   Lock,
-  Phone,
   Eye,
   EyeOff,
   Loader2,
 } from "lucide-react";
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,33 +26,65 @@ import { useRegisterMutation } from "@/redux/features/auth/auth.api";
 
 const formSchema = z
   .object({
+    /* =========================
+       NAME
+    ========================= */
+
     name: z
       .string()
+      .trim()
+      .min(1, "Full name is required.")
       .min(2, "Name must be at least 2 characters.")
       .max(100, "Name must be at most 100 characters."),
 
+    /* =========================
+       EMAIL
+    ========================= */
+
     email: z
       .string()
-      .min(1, "Email is required.")
+      .trim()
+      .min(1, "Email address is required.")
       .email("Please enter a valid email address."),
 
-    phone: z
-      .string()
-      .min(10, "Phone number must be at least 10 characters.")
-      .max(15, "Phone number must be at most 15 characters."),
+    /* =========================
+       PASSWORD
+    ========================= */
 
     password: z
       .string()
-      .min(6, "Password must be at least 6 characters."),
+      .min(1, "Password is required.")
+      .min(6, "Password must be at least 6 characters.")
+      .regex(
+        /^(?=.*[A-Z])/,
+        "Password must contain at least 1 uppercase letter."
+      ),
+
+    /* =========================
+       CONFIRM PASSWORD
+    ========================= */
 
     confirmPassword: z
       .string()
-      .min(6, "Confirm password must be at least 6 characters."),
+      .min(1, "Please confirm your password.")
+      .min(
+        6,
+        "Confirm password must be at least 6 characters."
+      ),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
-  });
+
+  /* =========================
+     PASSWORD MATCH
+  ========================= */
+
+  .refine(
+    (data) =>
+      data.password === data.confirmPassword,
+    {
+      message: "Passwords do not match.",
+      path: ["confirmPassword"],
+    }
+  );
 
 /* =====================================================
    TYPE
@@ -70,9 +99,20 @@ type FormValues = z.infer<typeof formSchema>;
 const RegisterForm = () => {
   const navigate = useNavigate();
 
-  const [registerUser, { isLoading }] = useRegisterMutation();
+  /* ===================================================
+     REGISTER API
+  =================================================== */
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [registerUser, { isLoading }] =
+    useRegisterMutation();
+
+  /* ===================================================
+     PASSWORD VISIBILITY
+  =================================================== */
+
+  const [showPassword, setShowPassword] =
+    useState(false);
+
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
@@ -86,32 +126,50 @@ const RegisterForm = () => {
     defaultValues: {
       name: "",
       email: "",
-      phone: "",
       password: "",
       confirmPassword: "",
     },
+
+    mode: "onSubmit",
+    reValidateMode: "onChange",
   });
 
-  /* ===================================================
+  /* =====================================================
      SUBMIT
-  =================================================== */
+  ===================================================== */
 
   const onSubmit = async (data: FormValues) => {
     try {
+      /* ================================================
+         API PAYLOAD
+      ================================================ */
 
       const userInfo = {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
+        name: data.name.trim(),
+        email: data.email.trim(),
         password: data.password,
       };
 
-        //  REGISTER API
+      console.log(
+        "Register Payload:",
+        userInfo
+      );
 
+      /* ================================================
+         REGISTER API
+      ================================================ */
 
-      const response = await registerUser(userInfo).unwrap();
+      const response =
+        await registerUser(userInfo).unwrap();
 
-      console.log("Register response:", response);
+      console.log(
+        "Register response:",
+        response
+      );
+
+      /* ================================================
+         SUCCESS TOAST
+      ================================================ */
 
       toast.success(
         response?.message ||
@@ -119,23 +177,129 @@ const RegisterForm = () => {
       );
 
       /* ================================================
-         Login page-এ redirect
+         RESET FORM
+      ================================================ */
+
+      form.reset();
+
+      /* ================================================
+         LOGIN PAGE
       ================================================ */
 
       navigate("/login");
 
-      /* ================================================
-         Form reset
-      ================================================ */
-
-      form.reset();
     } catch (error: any) {
-      console.log("========== REGISTER ERROR ==========");
-  console.log("Status:", error?.status);
-  console.log("Data:", error?.data);
-  console.log("Message:", error?.data?.message);
-  console.log("====================================");
-      console.error("Registration error:", error);
+      console.log(
+        "========== REGISTER ERROR =========="
+      );
+
+      console.log(
+        "Status:",
+        error?.status
+      );
+
+      console.log(
+        "Data:",
+        error?.data
+      );
+
+      console.log(
+        "Message:",
+        error?.data?.message
+      );
+
+      console.log(
+        "===================================="
+      );
+
+      /* =================================================
+         BACKEND ZOD ERROR
+
+         Example:
+
+         {
+           success: false,
+           message: "Zod Error",
+           err: {
+             issues: [...]
+           }
+         }
+
+         OR
+
+         {
+           success: false,
+           message: "Zod Error",
+           err: [...]
+         }
+      ================================================= */
+
+      const backendIssues =
+        error?.data?.err?.issues ||
+        error?.data?.err;
+
+      if (Array.isArray(backendIssues)) {
+        let hasFieldError = false;
+
+        backendIssues.forEach(
+          (issue: any) => {
+            /*
+             * Backend path:
+             *
+             * ["body", "password"]
+             *
+             * ["body", "email"]
+             *
+             * ["body", "name"]
+             */
+
+            const fieldName =
+              issue?.path?.[1];
+
+            const validFields: Array<
+              keyof FormValues
+            > = [
+              "name",
+              "email",
+              "password",
+              "confirmPassword",
+            ];
+
+            if (
+              fieldName &&
+              validFields.includes(
+                fieldName as keyof FormValues
+              )
+            ) {
+              form.setError(
+                fieldName as keyof FormValues,
+                {
+                  type: "server",
+                  message:
+                    issue?.message ||
+                    "Invalid value.",
+                }
+              );
+
+              hasFieldError = true;
+            }
+          }
+        );
+
+        /*
+         * If backend Zod errors are
+         * assigned to inputs,
+         * don't show generic toast.
+         */
+
+        if (hasFieldError) {
+          return;
+        }
+      }
+
+      /* =================================================
+         FALLBACK ERROR
+      ================================================= */
 
       toast.error(
         error?.data?.message ||
@@ -145,21 +309,32 @@ const RegisterForm = () => {
     }
   };
 
+  /* =====================================================
+     UI
+  ===================================================== */
+
   return (
     <form
       onSubmit={form.handleSubmit(onSubmit)}
       className="space-y-5"
+      noValidate
     >
+
       {/* =================================================
           NAME
       ================================================= */}
 
       <div className="space-y-2">
+
         <Label htmlFor="name">
-          Full name
+          Full name{" "}
+          <span className="text-destructive">
+            *
+          </span>
         </Label>
 
         <div className="relative">
+
           <User
             className="
               pointer-events-none
@@ -178,16 +353,29 @@ const RegisterForm = () => {
             id="name"
             type="text"
             placeholder="Enter your full name"
+            autoComplete="name"
             disabled={isLoading}
-            className="h-11 pl-10"
+            aria-invalid={
+              !!form.formState.errors.name
+            }
+            className={`h-11 pl-10 ${
+              form.formState.errors.name
+                ? "border-destructive focus-visible:ring-destructive"
+                : ""
+            }`}
           />
+
         </div>
 
         {form.formState.errors.name && (
           <p className="text-sm text-destructive">
-            {form.formState.errors.name.message}
+            {
+              form.formState.errors.name
+                .message
+            }
           </p>
         )}
+
       </div>
 
       {/* =================================================
@@ -195,11 +383,16 @@ const RegisterForm = () => {
       ================================================= */}
 
       <div className="space-y-2">
+
         <Label htmlFor="email">
-          Email address
+          Email address{" "}
+          <span className="text-destructive">
+            *
+          </span>
         </Label>
 
         <div className="relative">
+
           <Mail
             className="
               pointer-events-none
@@ -220,56 +413,27 @@ const RegisterForm = () => {
             placeholder="Enter your email"
             autoComplete="email"
             disabled={isLoading}
-            className="h-11 pl-10"
+            aria-invalid={
+              !!form.formState.errors.email
+            }
+            className={`h-11 pl-10 ${
+              form.formState.errors.email
+                ? "border-destructive focus-visible:ring-destructive"
+                : ""
+            }`}
           />
+
         </div>
 
         {form.formState.errors.email && (
           <p className="text-sm text-destructive">
-            {form.formState.errors.email.message}
+            {
+              form.formState.errors.email
+                .message
+            }
           </p>
         )}
-      </div>
 
-      {/* =================================================
-          PHONE
-      ================================================= */}
-
-      <div className="space-y-2">
-        <Label htmlFor="phone">
-          Phone number
-        </Label>
-
-        <div className="relative">
-          <Phone
-            className="
-              pointer-events-none
-              absolute
-              left-3
-              top-1/2
-              h-4
-              w-4
-              -translate-y-1/2
-              text-muted-foreground
-            "
-          />
-
-          <Input
-            {...form.register("phone")}
-            id="phone"
-            type="tel"
-            placeholder="01XXXXXXXXX"
-            autoComplete="tel"
-            disabled={isLoading}
-            className="h-11 pl-10"
-          />
-        </div>
-
-        {form.formState.errors.phone && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.phone.message}
-          </p>
-        )}
       </div>
 
       {/* =================================================
@@ -277,11 +441,16 @@ const RegisterForm = () => {
       ================================================= */}
 
       <div className="space-y-2">
+
         <Label htmlFor="password">
-          Password
+          Password{" "}
+          <span className="text-destructive">
+            *
+          </span>
         </Label>
 
         <div className="relative">
+
           <Lock
             className="
               pointer-events-none
@@ -298,17 +467,30 @@ const RegisterForm = () => {
           <Input
             {...form.register("password")}
             id="password"
-            type={showPassword ? "text" : "password"}
+            type={
+              showPassword
+                ? "text"
+                : "password"
+            }
             placeholder="Create a password"
             autoComplete="new-password"
             disabled={isLoading}
-            className="h-11 pl-10 pr-11"
+            aria-invalid={
+              !!form.formState.errors.password
+            }
+            className={`h-11 pl-10 pr-11 ${
+              form.formState.errors.password
+                ? "border-destructive focus-visible:ring-destructive"
+                : ""
+            }`}
           />
 
           <button
             type="button"
             onClick={() =>
-              setShowPassword((prev) => !prev)
+              setShowPassword(
+                (prev) => !prev
+              )
             }
             disabled={isLoading}
             aria-label={
@@ -322,6 +504,7 @@ const RegisterForm = () => {
               top-1/2
               -translate-y-1/2
               text-muted-foreground
+              transition-colors
               hover:text-foreground
             "
           >
@@ -331,13 +514,25 @@ const RegisterForm = () => {
               <Eye className="h-4 w-4" />
             )}
           </button>
+
         </div>
 
         {form.formState.errors.password && (
           <p className="text-sm text-destructive">
-            {form.formState.errors.password.message}
+            {
+              form.formState.errors.password
+                .message
+            }
           </p>
         )}
+
+        {!form.formState.errors.password && (
+          <p className="text-xs text-muted-foreground">
+            Minimum 6 characters with at least
+            1 uppercase letter.
+          </p>
+        )}
+
       </div>
 
       {/* =================================================
@@ -345,11 +540,16 @@ const RegisterForm = () => {
       ================================================= */}
 
       <div className="space-y-2">
+
         <Label htmlFor="confirmPassword">
-          Confirm password
+          Confirm password{" "}
+          <span className="text-destructive">
+            *
+          </span>
         </Label>
 
         <div className="relative">
+
           <Lock
             className="
               pointer-events-none
@@ -364,7 +564,9 @@ const RegisterForm = () => {
           />
 
           <Input
-            {...form.register("confirmPassword")}
+            {...form.register(
+              "confirmPassword"
+            )}
             id="confirmPassword"
             type={
               showConfirmPassword
@@ -374,13 +576,24 @@ const RegisterForm = () => {
             placeholder="Confirm your password"
             autoComplete="new-password"
             disabled={isLoading}
-            className="h-11 pl-10 pr-11"
+            aria-invalid={
+              !!form.formState.errors
+                .confirmPassword
+            }
+            className={`h-11 pl-10 pr-11 ${
+              form.formState.errors
+                .confirmPassword
+                ? "border-destructive focus-visible:ring-destructive"
+                : ""
+            }`}
           />
 
           <button
             type="button"
             onClick={() =>
-              setShowConfirmPassword((prev) => !prev)
+              setShowConfirmPassword(
+                (prev) => !prev
+              )
             }
             disabled={isLoading}
             aria-label={
@@ -394,6 +607,7 @@ const RegisterForm = () => {
               top-1/2
               -translate-y-1/2
               text-muted-foreground
+              transition-colors
               hover:text-foreground
             "
           >
@@ -403,16 +617,19 @@ const RegisterForm = () => {
               <Eye className="h-4 w-4" />
             )}
           </button>
+
         </div>
 
-        {form.formState.errors.confirmPassword && (
+        {form.formState.errors
+          .confirmPassword && (
           <p className="text-sm text-destructive">
             {
-              form.formState.errors.confirmPassword
-                .message
+              form.formState.errors
+                .confirmPassword.message
             }
           </p>
         )}
+
       </div>
 
       {/* =================================================
@@ -424,14 +641,17 @@ const RegisterForm = () => {
         disabled={isLoading}
         className="h-11 w-full"
       >
+
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+
             Creating account...
           </>
         ) : (
           "Create account"
         )}
+
       </Button>
 
     </form>
@@ -439,6 +659,3 @@ const RegisterForm = () => {
 };
 
 export default RegisterForm;
-
-
-

@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -14,160 +14,88 @@ import {
   Truck,
   X,
   RotateCcw,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { Product } from "@/types/shopType";
+
+// Change this import according to your actual ProductApi file
+import {
+  useGetAllProductQuery,
+  useGetBestSellingTodayQuery,
+} from "@/redux/features/product/product.api";
 
 
-
-
-/* =====================================================
-   MOCK PRODUCTS
-===================================================== */
-
-const products: Product[] = [
-  {
-    id: 1,
-    name: "Dog Dad Classic T-Shirt",
-    category: "Dog Lovers",
-    price: 24.99,
-    oldPrice: 29.99,
-    rating: 4.9,
-    reviews: 124,
-    image:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800",
-    hoverImage:
-      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800",
-    badge: "Trending",
-    colors: ["#111827", "#ffffff", "#9ca3af"],
-    sizes: ["S", "M", "L", "XL"],
-  },
-  {
-    id: 2,
-    name: "Cute Cat Lover T-Shirt",
-    category: "Cat Lovers",
-    price: 22.99,
-    oldPrice: 27.99,
-    rating: 4.8,
-    reviews: 98,
-    image:
-      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800",
-    hoverImage:
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800",
-    badge: "New",
-    colors: ["#ffffff", "#111827", "#f5d0fe"],
-    sizes: ["S", "M", "L", "XL"],
-  },
-  {
-    id: 3,
-    name: "Paw Print Premium Tee",
-    category: "Paw Collection",
-    price: 26.99,
-    oldPrice: 32.99,
-    rating: 4.9,
-    reviews: 87,
-    image:
-      "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=800",
-    hoverImage:
-      "https://images.unsplash.com/photo-1583743814966-8936f37f4678?w=800",
-    badge: "Popular",
-    colors: ["#111827", "#ffffff", "#d1d5db"],
-    sizes: ["M", "L", "XL"],
-  },
-  {
-    id: 4,
-    name: "My Dog Is My Best Friend",
-    category: "Dog Lovers",
-    price: 23.99,
-    oldPrice: 29.99,
-    rating: 4.7,
-    reviews: 76,
-    image:
-      "https://images.unsplash.com/photo-1583743814966-8936f37f4678?w=800",
-    hoverImage:
-      "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=800",
-    badge: "Sale",
-    colors: ["#111827", "#ffffff"],
-    sizes: ["S", "M", "L", "XL"],
-  },
-  {
-    id: 5,
-    name: "Cat Mom Minimal T-Shirt",
-    category: "Cat Lovers",
-    price: 24.99,
-    oldPrice: 29.99,
-    rating: 4.8,
-    reviews: 65,
-    image:
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800",
-    hoverImage:
-      "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800",
-    badge: "New",
-    colors: ["#ffffff", "#111827", "#f9a8d4"],
-    sizes: ["S", "M", "L"],
-  },
-  {
-    id: 6,
-    name: "Paws & Love T-Shirt",
-    category: "Paw Collection",
-    price: 25.99,
-    oldPrice: 30.99,
-    rating: 4.9,
-    reviews: 112,
-    image:
-      "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800",
-    hoverImage:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800",
-    badge: "Trending",
-    colors: ["#111827", "#ffffff", "#a7f3d0"],
-    sizes: ["S", "M", "L", "XL"],
-  },
-  {
-    id: 7,
-    name: "Best Dog Mom Ever",
-    category: "Dog Lovers",
-    price: 21.99,
-    oldPrice: 26.99,
-    rating: 4.8,
-    reviews: 91,
-    image:
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800",
-    hoverImage:
-      "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=800",
-    badge: "Popular",
-    colors: ["#ffffff", "#111827", "#fecdd3"],
-    sizes: ["S", "M", "L", "XL"],
-  },
-  {
-    id: 8,
-    name: "Paw Lover Oversized Tee",
-    category: "Paw Collection",
-    price: 27.99,
-    rating: 4.9,
-    reviews: 58,
-    image:
-      "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?w=800",
-    hoverImage:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800",
-    badge: "New",
-    colors: ["#111827", "#ffffff"],
-    sizes: ["M", "L", "XL", "XXL"],
-  },
-];
+import { toast } from "sonner";
+import type { IProduct } from "@/types";
+import { useAddToCartMutation } from "@/redux/features/addCard/add.card.api";
 
 /* =====================================================
-   CATEGORIES
+   TYPES
 ===================================================== */
 
-const categories = [
-  "All",
-  "Dog Lovers",
-  "Cat Lovers",
-  "Paw Collection",
-];
+type SortValue =
+  | "newest"
+  | "price-low"
+  | "price-high"
+  | "rating"
+  | "popular"
+  | "size"
+  | "size-desc";
+
+interface ProductCardProps {
+  product: IProduct;
+  onQuickView: () => void;
+  onAddToCart: (
+    product: IProduct,
+    size?: string,
+    color?: string
+  ) => void;
+}
+
+interface QuickViewProps {
+  product: IProduct;
+  onClose: () => void;
+  onAddToCart: (
+    product: IProduct,
+    size: string,
+    color: string
+  ) => void;
+}
+
+/* =====================================================
+   COLOR HELPER
+
+   Backend colors are usually names like:
+   White / Black / Navy / Pink
+
+   This converts names to UI colors.
+===================================================== */
+
+const getColorValue = (color: string) => {
+  const colorMap: Record<string, string> = {
+    white: "#ffffff",
+    black: "#111111",
+    navy: "#172554",
+    blue: "#2563eb",
+    red: "#ef4444",
+    green: "#22c55e",
+    yellow: "#eab308",
+    orange: "#f97316",
+    pink: "#ec4899",
+    purple: "#a855f7",
+    gray: "#9ca3af",
+    grey: "#9ca3af",
+    brown: "#92400e",
+    beige: "#f5f5dc",
+  };
+
+  return colorMap[color.toLowerCase()] || color;
+};
 
 /* =====================================================
    SHOP PAGE
@@ -175,54 +103,245 @@ const categories = [
 
 const Shop = () => {
   const [activeCategory, setActiveCategory] = useState("All");
+
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("Popular");
+
+  const [searchInput, setSearchInput] = useState("");
+
+  const [sortBy, setSortBy] =
+    useState<SortValue>("newest");
+
+  const [activeBadge, setActiveBadge] =
+    useState("All");
+
+  const [page, setPage] = useState(1);
+
+  const limit = 12;
 
   const [quickViewProduct, setQuickViewProduct] =
-    useState<Product | null>(null);
+    useState<IProduct | null>(null);
 
-  /* -------------------------------------------------
-     FILTER + SEARCH + SORT
-  ------------------------------------------------- */
+  /* =====================================================
+     API
+  ===================================================== */
 
-  const filteredProducts = useMemo(() => {
-    let result = products.filter((product) => {
-      const matchesCategory =
-        activeCategory === "All" ||
-        product.category === activeCategory;
+  const {
+    data: productResponse,
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = useGetAllProductQuery({
+    search,
+    category: activeCategory,
+    badge: activeBadge,
+    sort: sortBy,
+    page,
+    limit,
+  });
 
-      const matchesSearch = product.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
+  const {
+    data: bestSellingResponse,
+    isLoading: bestSellingLoading,
+  } = useGetBestSellingTodayQuery();
 
-      return matchesCategory && matchesSearch;
-    });
+  const [addToCart, { isLoading: addingToCart }] =
+    useAddToCartMutation();
 
-    if (sortBy === "Price: Low to High") {
-      result = [...result].sort(
-        (a, b) => a.price - b.price
-      );
+
+  const products: IProduct[] = useMemo(() => {
+    const response = productResponse as any;
+
+    if (!response) return [];
+
+    if (Array.isArray(response?.data)) {
+      return response.data;
     }
 
-    if (sortBy === "Price: High to Low") {
-      result = [...result].sort(
-        (a, b) => b.price - a.price
-      );
+    if (Array.isArray(response?.data?.data)) {
+      return response.data.data;
     }
 
-    if (sortBy === "Rating") {
-      result = [...result].sort(
-        (a, b) => b.rating - a.rating
+    return [];
+  }, [productResponse]);
+
+  const meta = useMemo(() => {
+    const response = productResponse as any;
+
+    return (
+      response?.meta ||
+      response?.data?.meta || {
+        total: 0,
+        page: 1,
+        limit,
+        totalPage: 1,
+      }
+    );
+  }, [productResponse, limit]);
+
+  /* =====================================================
+     BEST SELLING PRODUCTS
+  ===================================================== */
+
+  const bestSellingProducts: IProduct[] =
+    useMemo(() => {
+      const response =
+        bestSellingResponse as any;
+
+      if (!response) return [];
+
+      if (Array.isArray(response?.products)) {
+        return response.products;
+      }
+
+      if (Array.isArray(response?.data?.products)) {
+        return response.data.products;
+      }
+
+      if (Array.isArray(response?.data)) {
+        return response.data;
+      }
+
+      return [];
+    }, [bestSellingResponse]);
+
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+
+
+  const handleCategoryChange = (
+    category: string
+  ) => {
+    setActiveCategory(category);
+    setPage(1);
+  };
+
+
+
+  const handleSortChange = (
+    value: SortValue
+  ) => {
+    setSortBy(value);
+    setPage(1);
+  };
+
+  /* =====================================================
+     BADGE
+  ===================================================== */
+
+  const handleBadgeChange = (
+    badge: string
+  ) => {
+    setActiveBadge(badge);
+    setPage(1);
+  };
+
+
+  const handleAddToCart = async (
+    product: IProduct,
+    size?: string,
+    color?: string
+  ) => {
+    try {
+      if (!product?._id) {
+        toast.error("Product ID not found");
+        return;
+      }
+
+      const selectedSize =
+        size || product.sizes?.[0];
+
+      const selectedColor =
+        color || product.colors?.[0];
+
+      if (
+        product.sizes?.length &&
+        !selectedSize
+      ) {
+        toast.error("Please select a size");
+        return;
+      }
+
+      if (
+        product.colors?.length &&
+        !selectedColor
+      ) {
+        toast.error("Please select a color");
+        return;
+      }
+
+      await addToCart({
+        product: product._id,
+        quantity: 1,
+        size: selectedSize,
+        color: selectedColor,
+      } as any).unwrap();
+
+      toast.success("Added to cart!", {
+        description: `${product.name} has been added to your cart.`,
+      });
+    } catch (error: any) {
+      toast.error(
+        error?.data?.message ||
+          "Failed to add product to cart"
       );
     }
+  };
 
-    return result;
-  }, [activeCategory, search, sortBy]);
+  /* =====================================================
+     RESET FILTER
+  ===================================================== */
+
+  const clearFilters = () => {
+    setSearchInput("");
+    setSearch("");
+    setActiveCategory("All");
+    setActiveBadge("All");
+    setSortBy("newest");
+    setPage(1);
+  };
+
+  /* =====================================================
+     CATEGORIES
+  ===================================================== */
+
+  const categories = [
+    "All",
+    "Dog Lovers",
+    "Cat Lovers",
+    "Paw Collection",
+    "Custom",
+  ];
+
+  /* =====================================================
+     BADGES
+  ===================================================== */
+
+  const badges = [
+    "All",
+    "Trending",
+    "Best Seller",
+    "New",
+    "Popular",
+    "Sale",
+  ];
+
+  /* =====================================================
+     RENDER
+  ===================================================== */
 
   return (
     <main className="min-h-screen bg-background">
       {/* =================================================
-          SHOP HERO
+          HERO
       ================================================= */}
 
       <section className="relative overflow-hidden border-b bg-muted/30">
@@ -230,69 +349,109 @@ const Shop = () => {
 
         <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
 
-        <div className="container relative mx-auto px-4 py-16 text-center md:py-20">
+        <div className="container relative mx-auto px-4 py-16 text-center md:py-24">
           <Badge className="mb-5 rounded-full px-4 py-1.5">
             <PawPrint className="mr-2 h-4 w-4" />
             Made for Pet Lovers
           </Badge>
 
           <h1 className="text-4xl font-black tracking-tight md:text-6xl">
-            Find Something
+            Wear Your
             <span className="block text-primary">
-              You’ll Love ❤️
+              Love for Pets ❤️
             </span>
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-muted-foreground md:text-lg">
-            Discover unique T-shirts made for dog lovers,
-            cat lovers, and everyone who believes pets make
-            life better.
+            Premium T-shirts designed for dog
+            lovers, cat lovers and everyone who
+            believes pets make life better.
           </p>
+
+          <div className="mx-auto mt-8 flex max-w-xl items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+
+              <Input
+                value={searchInput}
+                onChange={(e) =>
+                  setSearchInput(e.target.value)
+                }
+                placeholder="Search your favorite T-shirt..."
+                className="h-12 rounded-full bg-background pl-12 shadow-sm"
+              />
+            </div>
+
+            <Button
+              className="h-12 rounded-full px-6"
+              onClick={() => {
+                setSearch(searchInput);
+                setPage(1);
+              }}
+            >
+              Search
+            </Button>
+          </div>
         </div>
       </section>
 
       {/* =================================================
-          TRENDING
+          BEST SELLING TODAY
       ================================================= */}
 
-      <section className="container mx-auto px-4 py-12">
-        <div className="mb-7 flex items-end justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-primary">
-              <span>🔥</span>
+      {!bestSellingLoading &&
+        bestSellingProducts.length > 0 && (
+          <section className="container mx-auto px-4 py-14">
+            <div className="mb-7 flex items-end justify-between">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-primary">
+                  <span className="text-xl">🔥</span>
 
-              <span className="text-sm font-bold uppercase tracking-wider">
-                Customer Favorites
-              </span>
+                  <span className="text-sm font-bold uppercase tracking-wider">
+                    Customer Favorites
+                  </span>
+                </div>
+
+                <h2 className="text-2xl font-black md:text-3xl">
+                  Best Selling Today
+                </h2>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Loved by pet parents everywhere
+                </p>
+              </div>
+
+              <Button
+                variant="ghost"
+                className="hidden sm:flex"
+                onClick={() => {
+                  setActiveBadge("Best Seller");
+                  setPage(1);
+                }}
+              >
+                View All
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
 
-            <h2 className="text-2xl font-bold md:text-3xl">
-              Trending Now
-            </h2>
-          </div>
-
-          <Button
-            variant="ghost"
-            className="hidden sm:flex"
-            onClick={() => setActiveCategory("All")}
-          >
-            View All
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {products.slice(0, 4).map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onQuickView={() =>
-                setQuickViewProduct(product)
-              }
-            />
-          ))}
-        </div>
-      </section>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {bestSellingProducts
+                .slice(0, 4)
+                .map((product) => (
+                  <ProductCard
+                    key={product._id}
+                    product={product}
+                    onQuickView={() =>
+                      setQuickViewProduct(product)
+                    }
+                    onAddToCart={
+                      handleAddToCart
+                    }
+                  />
+                ))}
+            </div>
+          </section>
+        )}
 
       {/* =================================================
           COLLECTIONS
@@ -304,23 +463,25 @@ const Shop = () => {
             Explore
           </p>
 
-          <h2 className="mt-2 text-2xl font-bold md:text-3xl">
+          <h2 className="mt-2 text-2xl font-black md:text-3xl">
             Shop by Collection
           </h2>
 
           <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
-            Find the perfect design for your favorite
-            four-legged friend.
+            Find a T-shirt that perfectly
+            represents your love for your pet.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <CollectionCard
             emoji="🐶"
             title="Dog Lovers"
             description="For proud dog parents"
             onClick={() =>
-              setActiveCategory("Dog Lovers")
+              handleCategoryChange(
+                "Dog Lovers"
+              )
             }
           />
 
@@ -329,7 +490,9 @@ const Shop = () => {
             title="Cat Lovers"
             description="Made for cat people"
             onClick={() =>
-              setActiveCategory("Cat Lovers")
+              handleCategoryChange(
+                "Cat Lovers"
+              )
             }
           />
 
@@ -338,7 +501,9 @@ const Shop = () => {
             title="Paw Collection"
             description="Simple paw designs"
             onClick={() =>
-              setActiveCategory("Paw Collection")
+              handleCategoryChange(
+                "Paw Collection"
+              )
             }
           />
 
@@ -346,64 +511,98 @@ const Shop = () => {
             emoji="✨"
             title="Custom"
             description="Create your own T-shirt"
-            onClick={() => {}}
+            onClick={() =>
+              handleCategoryChange("Custom")
+            }
           />
         </div>
       </section>
 
       {/* =================================================
-          SHOP PRODUCTS
+          SHOP SECTION
       ================================================= */}
 
-      <section className="container mx-auto px-4 py-14">
-        {/* Search / Filter */}
+      <section
+        id="products"
+        className="container mx-auto px-4 py-14"
+      >
+        {/* FILTER BAR */}
+
         <div className="mb-8 rounded-2xl border bg-card p-4 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            {/* Search */}
+            {/* SEARCH */}
+
             <div className="relative w-full lg:max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
               <Input
-                value={search}
+                value={searchInput}
                 onChange={(e) =>
-                  setSearch(e.target.value)
+                  setSearchInput(e.target.value)
                 }
                 placeholder="Search T-shirts..."
                 className="h-11 rounded-xl pl-10"
               />
             </div>
 
-            {/* Sort */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="rounded-xl"
-              >
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
+            {/* SORT */}
 
+            <div className="flex flex-wrap gap-2">
               <select
                 value={sortBy}
                 onChange={(e) =>
-                  setSortBy(e.target.value)
+                  handleSortChange(
+                    e.target.value as SortValue
+                  )
                 }
-                className="
-                  h-10 rounded-xl border
-                  bg-background px-3 text-sm
-                  outline-none
-                  focus:ring-2 focus:ring-primary
-                "
+                className="h-10 rounded-xl border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary"
               >
-                <option>Popular</option>
-                <option>Rating</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
+                <option value="newest">
+                  Newest
+                </option>
+
+                <option value="popular">
+                  Most Popular
+                </option>
+
+                <option value="rating">
+                  Top Rated
+                </option>
+
+                <option value="price-low">
+                  Price: Low to High
+                </option>
+
+                <option value="price-high">
+                  Price: High to Low
+                </option>
+
+                <option value="size">
+                  Size
+                </option>
+
+                <option value="size-desc">
+                  Size Descending
+                </option>
               </select>
+
+              {(search ||
+                activeCategory !== "All" ||
+                activeBadge !== "All" ||
+                sortBy !== "newest") && (
+                <Button
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={clearFilters}
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
 
-          {/* Categories */}
+          {/* CATEGORIES */}
+
           <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
             {categories.map((category) => (
               <Button
@@ -415,44 +614,188 @@ const Shop = () => {
                 }
                 className="shrink-0 rounded-full"
                 onClick={() =>
-                  setActiveCategory(category)
+                  handleCategoryChange(
+                    category
+                  )
                 }
               >
                 {category}
               </Button>
             ))}
           </div>
+
+          {/* BADGES */}
+
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {badges.map((badge) => (
+              <Button
+                key={badge}
+                size="sm"
+                variant={
+                  activeBadge === badge
+                    ? "secondary"
+                    : "ghost"
+                }
+                className="shrink-0 rounded-full"
+                onClick={() =>
+                  handleBadgeChange(badge)
+                }
+              >
+                {badge}
+              </Button>
+            ))}
+          </div>
         </div>
 
-        {/* Heading */}
+        {/* HEADER */}
+
         <div className="mb-7 flex items-end justify-between">
           <div>
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-2xl font-black">
               All Products
             </h2>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              Showing {filteredProducts.length} products
+              {meta.total || 0} products available
             </p>
           </div>
+
+          {isFetching && !isLoading && (
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          )}
         </div>
 
-        {/* Products */}
-        {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onQuickView={() =>
-                  setQuickViewProduct(product)
-                }
-              />
-            ))}
-          </div>
-        ) : (
+        {/* =================================================
+            LOADING
+        ================================================= */}
+
+        {isLoading ? (
+          <ProductSkeleton />
+        ) : isError ? (
+          /* =================================================
+             ERROR
+          ================================================= */
+
           <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed">
-            <Search className="mb-4 h-10 w-10 text-muted-foreground" />
+            <div className="mb-4 rounded-full bg-destructive/10 p-4">
+              <X className="h-8 w-8 text-destructive" />
+            </div>
+
+            <h3 className="text-lg font-bold">
+              Failed to load products
+            </h3>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Something went wrong while loading
+              products.
+            </p>
+
+            <Button
+              className="mt-5 rounded-full"
+              onClick={() => refetch()}
+            >
+              Try Again
+            </Button>
+          </div>
+        ) : products.length > 0 ? (
+          <>
+            {/* =================================================
+                PRODUCTS
+            ================================================= */}
+
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {products.map((product) => (
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  onQuickView={() =>
+                    setQuickViewProduct(product)
+                  }
+                  onAddToCart={
+                    handleAddToCart
+                  }
+                />
+              ))}
+            </div>
+
+            {/* =================================================
+                PAGINATION
+            ================================================= */}
+
+            {meta.totalPage > 1 && (
+              <div className="mt-12 flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={page <= 1}
+                  onClick={() =>
+                    setPage((prev) =>
+                      Math.max(prev - 1, 1)
+                    )
+                  }
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                {Array.from(
+                  {
+                    length: meta.totalPage,
+                  },
+                  (_, index) => index + 1
+                )
+                  .slice(
+                    Math.max(page - 3, 0),
+                    Math.min(
+                      page + 2,
+                      meta.totalPage
+                    )
+                  )
+                  .map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      variant={
+                        pageNumber === page
+                          ? "default"
+                          : "outline"
+                      }
+                      className="h-10 w-10"
+                      onClick={() =>
+                        setPage(pageNumber)
+                      }
+                    >
+                      {pageNumber}
+                    </Button>
+                  ))}
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={
+                    page >= meta.totalPage
+                  }
+                  onClick={() =>
+                    setPage((prev) =>
+                      Math.min(
+                        prev + 1,
+                        meta.totalPage
+                      )
+                    )
+                  }
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          /* =================================================
+             EMPTY
+          ================================================= */
+
+          <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed">
+            <div className="mb-4 rounded-full bg-muted p-4">
+              <Search className="h-8 w-8 text-muted-foreground" />
+            </div>
 
             <h3 className="text-lg font-bold">
               No products found
@@ -464,10 +807,7 @@ const Shop = () => {
 
             <Button
               className="mt-5 rounded-full"
-              onClick={() => {
-                setSearch("");
-                setActiveCategory("All");
-              }}
+              onClick={clearFilters}
             >
               Clear Filters
             </Button>
@@ -479,7 +819,7 @@ const Shop = () => {
           CUSTOM T-SHIRT
       ================================================= */}
 
-      <section className="container mx-auto px-4 py-12">
+      {/* <section className="container mx-auto px-4 py-12">
         <div className="relative overflow-hidden rounded-3xl bg-primary px-6 py-14 text-center text-primary-foreground md:px-12">
           <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10" />
 
@@ -493,8 +833,9 @@ const Shop = () => {
             </h2>
 
             <p className="mt-4 text-primary-foreground/80">
-              Put your favorite pet, name, or special
-              message on a T-shirt made just for you.
+              Put your favorite pet, name, or
+              special message on a T-shirt made
+              just for you.
             </p>
 
             <Button
@@ -507,10 +848,10 @@ const Shop = () => {
             </Button>
           </div>
         </div>
-      </section>
-
+      </section> */}
+ll
       {/* =================================================
-          TRUST SECTION
+          TRUST
       ================================================= */}
 
       <section className="border-y bg-muted/30">
@@ -542,13 +883,16 @@ const Shop = () => {
       </section>
 
       {/* =================================================
-          QUICK VIEW MODAL
+          QUICK VIEW
       ================================================= */}
 
       {quickViewProduct && (
         <QuickView
           product={quickViewProduct}
-          onClose={() => setQuickViewProduct(null)}
+          onClose={() =>
+            setQuickViewProduct(null)
+          }
+          onAddToCart={handleAddToCart}
         />
       )}
     </main>
@@ -562,12 +906,10 @@ const Shop = () => {
 const ProductCard = ({
   product,
   onQuickView,
-}: {
-  product: Product;
-  onQuickView: () => void;
-}) => {
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
+  onAddToCart,
+}: ProductCardProps) => {
+  const [isFavorite, setIsFavorite] =
+    useState(false);
 
   const discount =
     product.oldPrice &&
@@ -576,14 +918,6 @@ const ProductCard = ({
         product.oldPrice) *
         100
     );
-
-  const handleAddToCart = () => {
-    setAddedToCart(true);
-
-    setTimeout(() => {
-      setAddedToCart(false);
-    }, 1800);
-  };
 
   return (
     <div
@@ -595,29 +929,31 @@ const ProductCard = ({
         hover:shadow-2xl
       "
     >
-      {/* ================= IMAGE ================= */}
+      {/* IMAGE */}
 
       <div className="relative aspect-square overflow-hidden bg-muted">
-        {/* Main Image */}
+        {/* MAIN IMAGE */}
+
         <img
-          src={product.image}
+          src={product.images?.main}
           alt={product.name}
           className={`
             absolute inset-0 h-full w-full
             object-cover
             transition-all duration-700
             ${
-              product.hoverImage
+              product.images?.hover
                 ? "group-hover:scale-105 group-hover:opacity-0"
                 : "group-hover:scale-105"
             }
           `}
         />
 
-        {/* Hover Image */}
-        {product.hoverImage && (
+        {/* HOVER IMAGE */}
+
+        {product.images?.hover && (
           <img
-            src={product.hoverImage}
+            src={product.images.hover}
             alt={`${product.name} alternate`}
             className="
               absolute inset-0 h-full w-full
@@ -629,27 +965,32 @@ const ProductCard = ({
           />
         )}
 
-        {/* Badge */}
+        {/* BADGE */}
+
         {product.badge && (
           <Badge className="absolute left-3 top-3 rounded-full px-3 py-1">
             {product.badge}
           </Badge>
         )}
 
-        {/* Discount */}
+        {/* DISCOUNT */}
+
         {discount && discount > 0 && (
-          <span className="
-            absolute left-3 top-12
-            rounded-full bg-destructive
-            px-2.5 py-1
-            text-xs font-bold
-            text-destructive-foreground
-          ">
+          <span
+            className="
+              absolute left-3 top-12
+              rounded-full bg-destructive
+              px-2.5 py-1
+              text-xs font-bold
+              text-destructive-foreground
+            "
+          >
             -{discount}%
           </span>
         )}
 
-        {/* Wishlist */}
+        {/* WISHLIST */}
+
         <button
           type="button"
           onClick={() =>
@@ -657,10 +998,8 @@ const ProductCard = ({
           }
           className="
             absolute right-3 top-3
-            flex h-10 w-10
-            items-center justify-center
-            rounded-full
-            border
+            flex h-10 w-10 items-center justify-center
+            rounded-full border
             bg-background/90
             backdrop-blur-sm
             shadow-sm
@@ -680,7 +1019,8 @@ const ProductCard = ({
           />
         </button>
 
-        {/* Quick View */}
+        {/* QUICK VIEW */}
+
         <button
           type="button"
           onClick={onQuickView}
@@ -704,7 +1044,8 @@ const ProductCard = ({
           Quick View
         </button>
 
-        {/* Add Cart */}
+        {/* ADD CART */}
+
         <div
           className="
             absolute bottom-3 left-3 right-3
@@ -715,92 +1056,94 @@ const ProductCard = ({
           "
         >
           <Button
-            onClick={handleAddToCart}
+            onClick={() =>
+              onAddToCart(product)
+            }
             className="w-full rounded-xl shadow-lg"
           >
-            {addedToCart ? (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                Added to Cart
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Add to Cart
-              </>
-            )}
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Add to Cart
           </Button>
         </div>
       </div>
 
-      {/* ================= INFO ================= */}
+      {/* INFO */}
 
       <div className="p-4">
-        {/* Category */}
         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {product.category}
         </p>
 
-        {/* Name */}
         <h3 className="line-clamp-1 font-bold transition-colors group-hover:text-primary">
           {product.name}
         </h3>
 
-        {/* Rating */}
+        {/* RATING */}
+
         <div className="mt-2 flex items-center gap-1.5">
           <div className="flex items-center gap-1">
             <Star className="h-4 w-4 fill-current" />
 
             <span className="text-sm font-semibold">
-              {product.rating}
+              {product.rating ?? 0}
             </span>
           </div>
 
           <span className="text-xs text-muted-foreground">
-            ({product.reviews})
+            ({product.reviews ?? 0})
           </span>
         </div>
 
-        {/* Price */}
+        {/* PRICE */}
+
         <div className="mt-3 flex items-center gap-2">
           <span className="text-xl font-black">
-            ${product.price.toFixed(2)}
+            ${Number(product.price).toFixed(2)}
           </span>
 
           {product.oldPrice && (
             <span className="text-sm text-muted-foreground line-through">
-              ${product.oldPrice.toFixed(2)}
+              $
+              {Number(
+                product.oldPrice
+              ).toFixed(2)}
             </span>
           )}
         </div>
 
-        {/* Colors */}
-        {product.colors &&
-          product.colors.length > 0 && (
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                Colors:
-              </span>
+        {/* COLORS */}
 
-              <div className="flex gap-1.5">
-                {product.colors.map((color) => (
+        {product.colors?.length > 0 && (
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Colors:
+            </span>
+
+            <div className="flex gap-1.5">
+              {product.colors
+                .slice(0, 5)
+                .map((color) => (
                   <span
                     key={color}
+                    title={color}
                     className="h-4 w-4 rounded-full border shadow-sm"
                     style={{
-                      backgroundColor: color,
+                      backgroundColor:
+                        getColorValue(color),
                     }}
                   />
                 ))}
-              </div>
             </div>
-          )}
+          </div>
+        )}
 
-        {/* Sizes */}
-        {product.sizes &&
-          product.sizes.length > 0 && (
-            <div className="mt-3 flex gap-1.5">
-              {product.sizes.map((size) => (
+        {/* SIZES */}
+
+        {product.sizes?.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {product.sizes
+              .slice(0, 5)
+              .map((size) => (
                 <span
                   key={size}
                   className="
@@ -814,8 +1157,22 @@ const ProductCard = ({
                   {size}
                 </span>
               ))}
-            </div>
+          </div>
+        )}
+
+        {/* STOCK */}
+
+        <div className="mt-3">
+          {product.stock > 0 ? (
+            <span className="text-xs font-medium text-green-600">
+              ✓ In Stock
+            </span>
+          ) : (
+            <span className="text-xs font-medium text-destructive">
+              Out of Stock
+            </span>
           )}
+        </div>
       </div>
     </div>
   );
@@ -903,8 +1260,7 @@ const TrustItem = ({
         className="
           flex h-12 w-12 shrink-0
           items-center justify-center
-          rounded-full
-          bg-primary/10
+          rounded-full bg-primary/10
           text-primary
         "
       >
@@ -925,23 +1281,52 @@ const TrustItem = ({
 };
 
 /* =====================================================
+   PRODUCT SKELETON
+===================================================== */
+
+const ProductSkeleton = () => {
+  return (
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+      {Array.from({ length: 8 }).map(
+        (_, index) => (
+          <div
+            key={index}
+            className="overflow-hidden rounded-2xl border bg-card"
+          >
+            <div className="aspect-square animate-pulse bg-muted" />
+
+            <div className="space-y-3 p-4">
+              <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+
+              <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+
+              <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+
+              <div className="h-6 w-24 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  );
+};
+
+/* =====================================================
    QUICK VIEW
 ===================================================== */
 
 const QuickView = ({
   product,
   onClose,
-}: {
-  product: Product;
-  onClose: () => void;
-}) => {
+  onAddToCart,
+}: QuickViewProps) => {
   const [selectedSize, setSelectedSize] =
     useState(product.sizes?.[0] || "");
 
   const [selectedColor, setSelectedColor] =
     useState(product.colors?.[0] || "");
 
-  const [added, setAdded] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const discount =
     product.oldPrice &&
@@ -951,12 +1336,14 @@ const QuickView = ({
         100
     );
 
-  const handleAdd = () => {
-    setAdded(true);
-
-    setTimeout(() => {
-      setAdded(false);
-    }, 1800);
+  const handleAdd = async () => {
+    for (let i = 0; i < quantity; i++) {
+      await onAddToCart(
+        product,
+        selectedSize,
+        selectedColor
+      );
+    }
   };
 
   return (
@@ -972,7 +1359,7 @@ const QuickView = ({
       <div
         className="
           relative max-h-[90vh]
-          w-full max-w-4xl
+          w-full max-w-5xl
           overflow-y-auto
           rounded-3xl
           bg-background
@@ -982,7 +1369,8 @@ const QuickView = ({
           e.stopPropagation()
         }
       >
-        {/* Close */}
+        {/* CLOSE */}
+
         <button
           type="button"
           onClick={onClose}
@@ -1001,10 +1389,11 @@ const QuickView = ({
         </button>
 
         <div className="grid md:grid-cols-2">
-          {/* Image */}
+          {/* IMAGE */}
+
           <div className="relative aspect-square overflow-hidden bg-muted md:aspect-auto">
             <img
-              src={product.image}
+              src={product.images?.main}
               alt={product.name}
               className="h-full w-full object-cover"
             />
@@ -1016,7 +1405,8 @@ const QuickView = ({
             )}
           </div>
 
-          {/* Details */}
+          {/* DETAILS */}
+
           <div className="p-6 md:p-9">
             <p className="text-sm font-semibold uppercase tracking-wider text-primary">
               {product.category}
@@ -1026,31 +1416,39 @@ const QuickView = ({
               {product.name}
             </h2>
 
-            {/* Rating */}
+            {/* RATING */}
+
             <div className="mt-4 flex items-center gap-2">
               <div className="flex items-center gap-1">
                 <Star className="h-5 w-5 fill-current" />
 
                 <span className="font-bold">
-                  {product.rating}
+                  {product.rating ?? 0}
                 </span>
               </div>
 
               <span className="text-sm text-muted-foreground">
-                ({product.reviews} reviews)
+                ({product.reviews ?? 0} reviews)
               </span>
             </div>
 
-            {/* Price */}
+            {/* PRICE */}
+
             <div className="mt-5 flex items-center gap-3">
               <span className="text-3xl font-black">
-                ${product.price.toFixed(2)}
+                $
+                {Number(
+                  product.price
+                ).toFixed(2)}
               </span>
 
               {product.oldPrice && (
                 <>
                   <span className="text-lg text-muted-foreground line-through">
-                    ${product.oldPrice.toFixed(2)}
+                    $
+                    {Number(
+                      product.oldPrice
+                    ).toFixed(2)}
                   </span>
 
                   {discount && (
@@ -1062,118 +1460,175 @@ const QuickView = ({
               )}
             </div>
 
-            {/* Divider */}
+            {/* DESCRIPTION */}
+
+            {product.description && (
+              <p className="mt-5 text-sm leading-6 text-muted-foreground">
+                {product.description}
+              </p>
+            )}
+
             <div className="my-6 border-t" />
 
-            {/* Colors */}
-            {product.colors &&
-              product.colors.length > 0 && (
-                <div>
-                  <p className="mb-3 text-sm font-bold">
-                    Color
+            {/* COLORS */}
+
+            {product.colors?.length > 0 && (
+              <div>
+                <p className="mb-3 text-sm font-bold">
+                  Color
+                </p>
+
+                <div className="flex flex-wrap gap-3">
+                  {product.colors.map(
+                    (color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() =>
+                          setSelectedColor(
+                            color
+                          )
+                        }
+                        title={color}
+                        className={`
+                          flex h-10 w-10
+                          items-center justify-center
+                          rounded-full border-2
+                          ${
+                            selectedColor ===
+                            color
+                              ? "border-primary"
+                              : "border-transparent"
+                          }
+                        `}
+                      >
+                        <span
+                          className="
+                            h-8 w-8
+                            rounded-full border
+                          "
+                          style={{
+                            backgroundColor:
+                              getColorValue(
+                                color
+                              ),
+                          }}
+                        />
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Selected: {selectedColor}
+                </p>
+              </div>
+            )}
+
+            {/* SIZE */}
+
+            {product.sizes?.length > 0 && (
+              <div className="mt-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-bold">
+                    Size
                   </p>
 
-                  <div className="flex gap-3">
-                    {product.colors.map(
-                      (color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() =>
-                            setSelectedColor(color)
-                          }
-                          className={`
-                            flex h-9 w-9
-                            items-center justify-center
-                            rounded-full border-2
-                            ${
-                              selectedColor === color
-                                ? "border-primary"
-                                : "border-transparent"
-                            }
-                          `}
-                        >
-                          <span
-                            className="
-                              h-7 w-7
-                              rounded-full
-                              border
-                            "
-                            style={{
-                              backgroundColor:
-                                color,
-                            }}
-                          />
-                        </button>
-                      )
-                    )}
-                  </div>
+                  <button className="text-xs font-semibold text-primary hover:underline">
+                    Size Guide
+                  </button>
                 </div>
-              )}
 
-            {/* Sizes */}
-            {product.sizes &&
-              product.sizes.length > 0 && (
-                <div className="mt-6">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-sm font-bold">
-                      Size
-                    </p>
-
-                    <button className="text-xs font-semibold text-primary hover:underline">
-                      Size Guide
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {product.sizes.map(
-                      (size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() =>
-                            setSelectedSize(size)
+                <div className="flex flex-wrap gap-2">
+                  {product.sizes.map(
+                    (size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() =>
+                          setSelectedSize(
+                            size
+                          )
+                        }
+                        className={`
+                          min-w-12 rounded-lg
+                          border px-4 py-2
+                          text-sm font-semibold
+                          transition
+                          ${
+                            selectedSize ===
+                            size
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "hover:border-primary"
                           }
-                          className={`
-                            min-w-12 rounded-lg
-                            border px-4 py-2
-                            text-sm font-semibold
-                            transition
-                            ${
-                              selectedSize === size
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "hover:border-primary"
-                            }
-                          `}
-                        >
-                          {size}
-                        </button>
-                      )
-                    )}
-                  </div>
+                        `}
+                      >
+                        {size}
+                      </button>
+                    )
+                  )}
                 </div>
-              )}
+              </div>
+            )}
 
-            {/* Add */}
+            {/* QUANTITY */}
+
+            <div className="mt-6">
+              <p className="mb-3 text-sm font-bold">
+                Quantity
+              </p>
+
+              <div className="flex items-center">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    setQuantity((q) =>
+                      Math.max(q - 1, 1)
+                    )
+                  }
+                >
+                  -
+                </Button>
+
+                <span className="w-12 text-center font-bold">
+                  {quantity}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    setQuantity((q) =>
+                      Math.min(
+                        q + 1,
+                        product.stock || 99
+                      )
+                    )
+                  }
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+
+            {/* ADD CART */}
+
             <Button
               size="lg"
+              disabled={product.stock <= 0}
               onClick={handleAdd}
               className="mt-8 h-12 w-full rounded-xl"
             >
-              {added ? (
-                <>
-                  <Check className="mr-2 h-5 w-5" />
-                  Added to Cart
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="mr-2 h-5 w-5" />
-                  Add to Cart
-                </>
-              )}
+              <ShoppingCart className="mr-2 h-5 w-5" />
+
+              {product.stock > 0
+                ? "Add to Cart"
+                : "Out of Stock"}
             </Button>
 
-            {/* Benefits */}
+            {/* BENEFITS */}
+
             <div className="mt-6 space-y-3">
               <div className="flex items-center gap-3 text-sm">
                 <Truck className="h-4 w-4 text-primary" />

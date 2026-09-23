@@ -1,6 +1,6 @@
 import { baseApi } from "@/redux/baseApi";
 import type { IResponse } from "@/types";
-import type { ILogin } from "@/types/auth.types";
+import type { ILogin, IUpdateProfilePayload } from "@/types/auth.types";
 
 
 
@@ -16,6 +16,22 @@ import type { ILogin } from "@/types/auth.types";
                 data:userInfo
             })
         }),
+
+     updateProfile: build.mutation<
+      any,
+      {
+        userId: string;
+        data: IUpdateProfilePayload;
+      }
+    >({
+      query: ({ userId, data }) => ({
+        url: `/user/${userId}`,
+        method: "PATCH",
+        data,
+      }),
+
+      invalidatesTags: ["USER"],
+    }),
 
         login:build.mutation<IResponse<null>, ILogin>({
             query:(userInfo)=>({
@@ -47,4 +63,10 @@ import type { ILogin } from "@/types/auth.types";
     })
 })
 
-export const {  useLoginMutation, useRegisterMutation, useLogoutMutation, useUserInfoQuery} = authApi
+export const {  useLoginMutation, 
+    useRegisterMutation, 
+    useLogoutMutation,
+     useUserInfoQuery,
+     useUpdateProfileMutation
+    
+    } = authApi

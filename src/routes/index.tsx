@@ -23,6 +23,8 @@ import PaymentCancel from "@/pages/payment/PaymentCancel";
 import MyOrders from "@/components/modules/user/MyOrders";
 import MyOrderDetails from "@/components/modules/user/MyOrderDetails";
 import Profile from "@/pages/Profile";
+import Unauthorized from "@/components/modules/Authorization/Unauthorized";
+import NotFound from "@/components/modules/Authorization/NotFound";
 
 export const router = createBrowserRouter([
   {
@@ -66,7 +68,8 @@ export const router = createBrowserRouter([
         Component: Profile,
         path:"/profile"
       },
-     
+
+       
     ],
   },
 
@@ -110,5 +113,16 @@ export const router = createBrowserRouter([
     {
         Component: MyOrderDetails,
         path:"/my-bookings/:id"
-   }
+   },
+    {
+        Component: Unauthorized,
+        path: "unauthorized",
+      },
+
+  
+      {
+        Component: NotFound,
+        path: "*",
+      },
+     
 ]);
