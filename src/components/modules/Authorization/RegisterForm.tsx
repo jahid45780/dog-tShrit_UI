@@ -54,12 +54,8 @@ const formSchema = z
     password: z
       .string()
       .min(1, "Password is required.")
-      .min(6, "Password must be at least 6 characters.")
-      .regex(
-        /^(?=.*[A-Z])/,
-        "Password must contain at least 1 uppercase letter."
-      ),
-
+      .min(5, "Password must be at least 5 characters."),
+   
     /* =========================
        CONFIRM PASSWORD
     ========================= */
@@ -67,10 +63,7 @@ const formSchema = z
     confirmPassword: z
       .string()
       .min(1, "Please confirm your password.")
-      .min(
-        6,
-        "Confirm password must be at least 6 characters."
-      ),
+     
   })
 
   /* =========================

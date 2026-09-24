@@ -155,7 +155,7 @@ const Profile = () => {
     } catch (error: any) {
       console.error(
         "Profile update error:",
-        error
+        error 
       );
 
       toast.error(

@@ -10,7 +10,7 @@ import {
 
 import { useState } from "react";
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,6 +84,8 @@ const TrendingProducts = () => {
 
   const [selectedColor, setSelectedColor] =
     useState<string>("");
+
+    const navigate = useNavigate();
 
   const [selectedSize, setSelectedSize] =
     useState<string>("");
@@ -184,6 +186,8 @@ const TrendingProducts = () => {
         description: `${selectedProduct.name} has been added to your cart.`,
       });
 
+      navigate("/user/my-card")
+
 
       // Close dialog
       setSelectedProduct(null);
@@ -200,9 +204,9 @@ const TrendingProducts = () => {
       console.error("Add to cart error:", error);
 
       toast.error(
-        error?.data?.message ||
-          "Failed to add product to cart.",
+          "Please log in to your account first. Once you’re logged in, add your card details and then complete the payment.",
       );
+      navigate("/login")
     }
   };
 

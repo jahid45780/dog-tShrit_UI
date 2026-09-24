@@ -1,11 +1,16 @@
 
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import {
   ArrowLeft,
   Check,
   CreditCard,
+  Loader2,
   MapPin,
   Package,
+  Pencil,
+  Save,
   ShieldCheck,
   Truck,
 } from "lucide-react";
@@ -13,6 +18,7 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardContent,
@@ -20,18 +26,33 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 import {
   useCreateBookingMutation,
 } from "@/redux/features/booking/booking.api";
-import { useGetMyCartQuery } from "@/redux/features/addCard/add.card.api";
+
+import {
+  useGetMyCartQuery,
+} from "@/redux/features/addCard/add.card.api";
+import { useUpdateProfileMutation, useUserInfoQuery } from "@/redux/features/auth/auth.api";
+
+
 
 const Checkout = () => {
   const navigate = useNavigate();
 
-  const [createBooking, { isLoading }] =
+  // =====================================
+  // BOOKING
+  // =====================================
+
+  const [createBooking, { isLoading: isBooking }] =
     useCreateBookingMutation();
+
+  // =====================================
+  // CART
+  // =====================================
 
   const {
     data: cartResponse,
@@ -42,6 +63,131 @@ const Checkout = () => {
   const cart = cartResponse?.data;
 
   const items = cart?.items ?? [];
+
+  // =====================================
+  // USER INFO
+  // =====================================
+
+  const {
+    data: userResponse,
+    isLoading: userLoading,
+  } = useUserInfoQuery(undefined);
+
+  const user = userResponse?.data;
+
+  // =====================================
+  // UPDATE PROFILE
+  // =====================================
+
+  const [updateProfile, { isLoading: isUpdating }] =
+    useUpdateProfileMutation();
+
+  // =====================================
+  // PROFILE STATE
+  // =====================================
+
+  const [isEditingProfile, setIsEditingProfile] =
+    useState(false);
+
+  const [profileData, setProfileData] = useState({
+    name: "",
+    phone: "",
+    address: "",
+  });
+
+  // =====================================
+  // SET USER DATA
+  // =====================================
+
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || "",
+        phone: user.phone || "",
+        address: user.address || "",
+      });
+    }
+  }, [user]);
+
+  // =====================================
+  // CHECK PROFILE
+  // =====================================
+
+  const isProfileComplete =
+    Boolean(
+      profileData.name.trim() &&
+        profileData.phone.trim() &&
+        profileData.address.trim()
+    );
+
+  // =====================================
+  // PROFILE INPUT CHANGE
+  // =====================================
+
+  const handleProfileChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target;
+
+    setProfileData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // =====================================
+  // UPDATE PROFILE
+  // =====================================
+
+  const handleUpdateProfile = async () => {
+    if (!user?._id) {
+      toast.error("User information not found");
+      return;
+    }
+
+    if (!profileData.name.trim()) {
+      toast.error("Please enter your name");
+      return;
+    }
+
+    if (!profileData.phone.trim()) {
+      toast.error("Please enter your phone number");
+      return;
+    }
+
+    if (!profileData.address.trim()) {
+      toast.error("Please enter your delivery address");
+      return;
+    }
+
+    try {
+      await updateProfile({
+        userId: user._id,
+        data: {
+          name: profileData.name.trim(),
+          phone: profileData.phone.trim(),
+          address: profileData.address.trim(),
+        },
+      }).unwrap();
+
+      toast.success(
+        "Shipping information updated successfully"
+      );
+
+      setIsEditingProfile(false);
+    } catch (error: any) {
+      console.error(
+        "Update profile error:",
+        error
+      );
+
+      toast.error(
+        error?.data?.message ||
+          error?.message ||
+          "Failed to update profile"
+      );
+    }
+  };
 
   // =====================================
   // CALCULATE SUBTOTAL
@@ -75,7 +221,21 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     // -----------------------------------
-    // Empty cart
+    // CHECK PROFILE
+    // -----------------------------------
+
+    if (!isProfileComplete) {
+      toast.error(
+        "Please complete your shipping information first."
+      );
+
+      setIsEditingProfile(true);
+
+      return;
+    }
+
+    // -----------------------------------
+    // EMPTY CART
     // -----------------------------------
 
     if (!items.length) {
@@ -131,9 +291,9 @@ const Checkout = () => {
 
       toast.error(
         error?.data?.message ||
-          "Unable to create booking"
+          error?.message ||
+          "Failed to create booking"
       );
-       navigate("/profile");
     }
   };
 
@@ -141,11 +301,11 @@ const Checkout = () => {
   // LOADING
   // =====================================
 
-  if (cartLoading) {
+  if (cartLoading || userLoading) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
+          <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin" />
 
           <p className="text-gray-500">
             Loading checkout...
@@ -156,7 +316,7 @@ const Checkout = () => {
   }
 
   // =====================================
-  // ERROR
+  // CART ERROR
   // =====================================
 
   if (cartError) {
@@ -215,14 +375,12 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
       {/* ================================= */}
       {/* HEADER */}
       {/* ================================= */}
 
       <header className="border-b bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-
           <Link
             to="/"
             className="text-xl font-bold tracking-tight"
@@ -243,8 +401,8 @@ const Checkout = () => {
       {/* ================================= */}
 
       <main className="mx-auto max-w-7xl px-4 py-8">
+        {/* BACK */}
 
-        {/* Back */}
         <Link
           to="/my-cart"
           className="mb-6 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black"
@@ -254,7 +412,7 @@ const Checkout = () => {
           Back to Cart
         </Link>
 
-        {/* Title */}
+        {/* TITLE */}
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold">
@@ -262,66 +420,216 @@ const Checkout = () => {
           </h1>
 
           <p className="mt-2 text-gray-500">
-            Review your order and continue to secure payment.
+            Review your order and continue to secure
+            payment.
           </p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
-
           {/* ================================= */}
           {/* LEFT SIDE */}
           {/* ================================= */}
 
           <div className="space-y-6 lg:col-span-2">
-
-            {/* SHIPPING */}
+            {/* ================================= */}
+            {/* SHIPPING INFORMATION */}
+            {/* ================================= */}
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
 
-                  Shipping Information
-                </CardTitle>
+                    Shipping Information
+                  </CardTitle>
+
+                  {isProfileComplete &&
+                    !isEditingProfile && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setIsEditingProfile(true)
+                        }
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+
+                        Edit
+                      </Button>
+                    )}
+                </div>
               </CardHeader>
 
               <CardContent>
+                {/* ================================= */}
+                {/* EDIT / COMPLETE FORM */}
+                {/* ================================= */}
 
-                <div className="rounded-xl border bg-gray-50 p-5">
+                {isEditingProfile ||
+                !isProfileComplete ? (
+                  <div className="space-y-5">
+                    {/* WARNING */}
 
-                  <div className="flex gap-4">
+                    {!isProfileComplete && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-sm font-semibold text-amber-800">
+                          Complete your shipping
+                          information
+                        </p>
 
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm">
-                      <Truck className="h-5 w-5" />
+                        <p className="mt-1 text-sm leading-6 text-amber-700">
+                          Please provide your name,
+                          phone number and delivery
+                          address before placing your
+                          order.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* NAME */}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="checkout-name">
+                        Full Name
+                      </Label>
+
+                      <Input
+                        id="checkout-name"
+                        name="name"
+                        value={profileData.name}
+                        onChange={handleProfileChange}
+                        placeholder="Enter your full name"
+                      />
                     </div>
 
-                    <div>
+                    {/* PHONE */}
 
-                      <h3 className="font-semibold">
+                    <div className="space-y-2">
+                      <Label htmlFor="checkout-phone">
+                        Phone Number
+                      </Label>
+
+                      <Input
+                        id="checkout-phone"
+                        name="phone"
+                        value={profileData.phone}
+                        onChange={handleProfileChange}
+                        placeholder="01XXXXXXXXX"
+                        type="tel"
+                      />
+                    </div>
+
+                    {/* ADDRESS */}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="checkout-address">
                         Delivery Address
-                      </h3>
+                      </Label>
 
-                      <p className="mt-1 text-sm leading-6 text-gray-500">
-                        Your shipping name, phone number,
-                        and address will be taken from your
-                        account profile.
-                      </p>
+                      <Input
+                        id="checkout-address"
+                        name="address"
+                        value={profileData.address}
+                        onChange={handleProfileChange}
+                        placeholder="Enter your delivery address"
+                      />
+                    </div>
 
-                      <p className="mt-3 text-sm font-medium">
-                        Please make sure your profile
-                        information is up to date before
-                        placing the order.
-                      </p>
+                    {/* ACTIONS */}
 
+                    <div className="flex justify-end gap-3">
+                      {isProfileComplete && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditingProfile(false);
+
+                            setProfileData({
+                              name:
+                                user?.name || "",
+                              phone:
+                                user?.phone || "",
+                              address:
+                                user?.address || "",
+                            });
+                          }}
+                          disabled={isUpdating}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+
+                      <Button
+                        onClick={
+                          handleUpdateProfile
+                        }
+                        disabled={isUpdating}
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+
+                            Save Information
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
+                ) : (
+                  /* ================================= */
+                  /* SAVED SHIPPING INFORMATION */
+                  /* ================================= */
 
-                </div>
+                  <div className="rounded-xl border bg-gray-50 p-5">
+                    <div className="flex gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm">
+                        <Truck className="h-5 w-5" />
+                      </div>
 
+                      <div className="min-w-0">
+                        <h3 className="font-semibold">
+                          Delivery Address
+                        </h3>
+
+                        <div className="mt-3 space-y-1.5 text-sm text-gray-600">
+                          <p>
+                            <span className="font-medium text-gray-900">
+                              Name:
+                            </span>{" "}
+                            {profileData.name}
+                          </p>
+
+                          <p>
+                            <span className="font-medium text-gray-900">
+                              Phone:
+                            </span>{" "}
+                            {profileData.phone}
+                          </p>
+
+                          <p>
+                            <span className="font-medium text-gray-900">
+                              Address:
+                            </span>{" "}
+                            {profileData.address}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
+            {/* ================================= */}
             {/* PAYMENT */}
+            {/* ================================= */}
 
             <Card>
               <CardHeader>
@@ -333,51 +641,44 @@ const Checkout = () => {
               </CardHeader>
 
               <CardContent>
-
                 <div className="rounded-xl border-2 border-black bg-white p-5">
-
                   <div className="flex items-center gap-4">
-
                     <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-black text-white">
                       <CreditCard className="h-5 w-5" />
                     </div>
 
                     <div className="flex-1">
-
                       <h3 className="font-semibold">
                         Credit / Debit Card
                       </h3>
 
                       <p className="mt-1 text-sm text-gray-500">
-                        Secure payment powered by Stripe.
+                        Secure payment powered by
+                        Stripe.
                       </p>
-
                     </div>
 
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
                       <Check className="h-4 w-4" />
                     </div>
-
                   </div>
-
                 </div>
 
                 <div className="mt-4 flex gap-3 rounded-lg bg-green-50 p-4 text-sm text-green-700">
-
                   <ShieldCheck className="h-5 w-5 shrink-0" />
 
                   <p>
-                    Your payment information is securely
-                    processed by Stripe. We do not store
-                    your card details.
+                    Your payment information is
+                    securely processed by Stripe. We
+                    do not store your card details.
                   </p>
-
                 </div>
-
               </CardContent>
             </Card>
 
+            {/* ================================= */}
             {/* PRODUCTS */}
+            {/* ================================= */}
 
             <Card>
               <CardHeader>
@@ -387,23 +688,20 @@ const Checkout = () => {
               </CardHeader>
 
               <CardContent>
-
                 <div className="space-y-4">
-
                   {items.map((item) => (
                     <div
                       key={item._id}
                       className="flex gap-4 border-b pb-4 last:border-b-0 last:pb-0"
                     >
-
                       {/* IMAGE */}
 
                       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-
                         {item.product.images?.main ? (
                           <img
                             src={
-                              item.product.images.main
+                              item.product.images
+                                .main
                             }
                             alt={
                               item.product.name
@@ -415,19 +713,18 @@ const Checkout = () => {
                             <Package className="h-7 w-7 text-gray-400" />
                           </div>
                         )}
-
                       </div>
 
                       {/* INFO */}
 
                       <div className="min-w-0 flex-1">
-
                         <h3 className="font-semibold">
                           {item.product.name}
                         </h3>
 
                         <p className="mt-1 text-sm text-gray-500">
-                          Quantity: {item.quantity}
+                          Quantity:{" "}
+                          {item.quantity}
                         </p>
 
                         {item.color && (
@@ -441,13 +738,11 @@ const Checkout = () => {
                             Size: {item.size}
                           </p>
                         )}
-
                       </div>
 
                       {/* PRICE */}
 
                       <div className="text-right">
-
                         <p className="font-semibold">
                           $
                           {(
@@ -463,17 +758,12 @@ const Checkout = () => {
                           )}{" "}
                           each
                         </p>
-
                       </div>
-
                     </div>
                   ))}
-
                 </div>
-
               </CardContent>
             </Card>
-
           </div>
 
           {/* ================================= */}
@@ -481,9 +771,7 @@ const Checkout = () => {
           {/* ================================= */}
 
           <div>
-
             <Card className="sticky top-6">
-
               <CardHeader>
                 <CardTitle>
                   Order Summary
@@ -491,8 +779,8 @@ const Checkout = () => {
               </CardHeader>
 
               <CardContent>
-
                 <div className="space-y-4">
+                  {/* ITEMS */}
 
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">
@@ -504,6 +792,8 @@ const Checkout = () => {
                     </span>
                   </div>
 
+                  {/* SUBTOTAL */}
+
                   <div className="flex justify-between">
                     <span className="text-gray-500">
                       Subtotal
@@ -513,6 +803,8 @@ const Checkout = () => {
                       ${subtotal.toFixed(2)}
                     </span>
                   </div>
+
+                  {/* SHIPPING */}
 
                   <div className="flex justify-between">
                     <span className="text-gray-500">
@@ -524,10 +816,10 @@ const Checkout = () => {
                     </span>
                   </div>
 
+                  {/* TOTAL */}
+
                   <div className="border-t pt-4">
-
                     <div className="flex justify-between text-lg font-bold">
-
                       <span>
                         Total
                       </span>
@@ -535,42 +827,66 @@ const Checkout = () => {
                       <span>
                         ${total.toFixed(2)}
                       </span>
-
                     </div>
-
                   </div>
 
-                  {/* BUTTON */}
+                  {/* ================================= */}
+                  {/* PLACE ORDER BUTTON */}
+                  {/* ================================= */}
 
                   <Button
                     className="h-12 w-full text-base"
                     size="lg"
-                    disabled={isLoading}
-                    onClick={handlePlaceOrder}
+                    disabled={
+                      isBooking ||
+                      isUpdating ||
+                      userLoading ||
+                      !isProfileComplete
+                    }
+                    onClick={
+                      handlePlaceOrder
+                    }
                   >
-                    {isLoading
-                      ? "Creating Order..."
-                      : "Place Order & Pay"}
+                    {isBooking ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+
+                        Creating Order...
+                      </>
+                    ) : !isProfileComplete ? (
+                      "Complete Shipping Information"
+                    ) : (
+                      "Place Order & Pay"
+                    )}
                   </Button>
+
+                  {/* PROFILE MESSAGE */}
+
+                  {!isProfileComplete && (
+                    <p className="text-center text-xs leading-5 text-amber-600">
+                      Please complete your name,
+                      phone number and address before
+                      placing your order.
+                    </p>
+                  )}
 
                   <p className="text-center text-xs leading-5 text-gray-400">
                     By placing your order, you agree
                     to our terms and conditions.
                   </p>
-
                 </div>
-
               </CardContent>
             </Card>
-
           </div>
-
         </div>
-
       </main>
-
     </div>
   );
 };
 
 export default Checkout;
+
+
+
+
+

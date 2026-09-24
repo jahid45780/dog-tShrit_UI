@@ -63,7 +63,8 @@ import type { ILogin, IUpdateProfilePayload } from "@/types/auth.types";
     })
 })
 
-export const {  useLoginMutation, 
+export const {  
+    useLoginMutation, 
     useRegisterMutation, 
     useLogoutMutation,
      useUserInfoQuery,

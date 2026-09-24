@@ -102,6 +102,8 @@ const BestSellingTShirts = () => {
 
       toast.success("Product added to cart successfully");
 
+      navigate("/user/my-card")
+
       setIsDialogOpen(false);
 
       // Reset
@@ -112,10 +114,10 @@ const BestSellingTShirts = () => {
       console.error("Add to cart error:", error);
 
       toast.error(
-        error?.data?.message ||
-          error?.message ||
-          "Failed to add product to cart"
+          "Please log in to your account first. Once you’re logged in, add your card details and then complete the payment."
       );
+
+       navigate("/login")
     }
   };
 

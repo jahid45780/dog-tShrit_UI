@@ -258,9 +258,10 @@ const CollectionsDetalis = () => {
         );
 
         toast.success(
-          error?.data?.message ||
-            "Failed to add product to cart"
+         "Please log in to your account first. Once you’re logged in, add your card details and then complete the payment"
         );
+
+        navigate("/login")
       }
     };
 
