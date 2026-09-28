@@ -72,3 +72,30 @@ export interface IOrdersQuery {
   paymentStatus?: string;
   bookingStatus?: string;
 }
+
+
+export interface IAdminUser {
+  IsActive: string;
+  _id: string;
+  name: string;
+  email: string;
+  role: "USER" | "ADMIN";
+  phone?: string;
+  address?: string;
+  isVerified?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface IAllUserResponse {
+  success: boolean;
+  statusCode: number;
+  message: string;
+  data: IAdminUser[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

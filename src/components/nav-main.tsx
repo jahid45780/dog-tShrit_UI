@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, PawPrint } from "lucide-react";
-import { Link, Links } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 interface NavItem {
   title: string;

@@ -146,7 +146,7 @@ const Shop = () => {
     isLoading: bestSellingLoading,
   } = useGetBestSellingTodayQuery();
 
-  const [addToCart, { isLoading: addingToCart }] =
+  const [addToCart] =
     useAddToCartMutation();
 
 
