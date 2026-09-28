@@ -12,7 +12,7 @@ export const userSidebarItems:ISidebarItem[] = [
       
 
        {
-        title: "My Card",
+        title: "My Cart",
         url: "/user/my-card",
         component: MyCart
       },
