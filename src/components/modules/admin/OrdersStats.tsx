@@ -1,10 +1,22 @@
 
 import { useMemo, useState } from "react";
 import {
+  AnimatePresence,
+  motion,
+  type Variants,
+} from "framer-motion";
+
+import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock3,
+  DollarSign,
+  Eye,
+  FileText,
   Mail,
   MapPin,
   Package,
@@ -12,207 +24,925 @@ import {
   RefreshCw,
   Search,
   ShoppingBag,
-  Truck,
   User,
   X,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { useGetAllOrdersQuery } from "@/redux/features/stats/adminStats/admin.stats.api";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+/* =========================================================
+   TYPES
+========================================================= */
 
-import { Badge } from "@/components/ui/badge";
+interface IProductImage {
+  main?: string;
+  hover?: string;
+}
 
-import { Input } from "@/components/ui/input";
+interface IOrderItem {
+  product?: {
+    _id?: string;
+    name?: string;
+    images?: IProductImage;
+  };
 
-import { useGetAllOrdersQuery } from "@/redux/features/orders/orderApi";
+  name?: string;
+  image?: string;
+  quantity?: number;
+  price?: number;
+  subtotal?: number;
+  color?: string;
+  size?: string;
+}
 
+interface ICustomer {
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+}
 
-// =====================================
-// TYPES
-// =====================================
+/* =========================================================
+   SHIPPING ADDRESS
+   Guest order এর data এখানে থাকে
+========================================================= */
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50];
+interface IShippingAddress {
+  name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+}
 
-const PAYMENT_STATUSES = [
-  "ALL",
-  "PENDING",
-  "PAID",
-  "FAILED",
-  "REFUNDED",
-];
+interface IOrderUser {
+  _id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+}
 
-const ORDER_STATUSES = [
-  "ALL",
-  "PENDING",
-  "CONFIRMED",
-  "PROCESSING",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
-];
+interface IOrder {
+  _id: string;
 
+  /* Logged-in user */
+  user?: IOrderUser | null;
 
-// =====================================
-// PAYMENT BADGE
-// =====================================
+  /* Guest user */
+  guestId?: string;
 
-const getPaymentBadge = (status: string) => {
-  switch (status) {
-    case "PAID":
-      return (
-        <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20">
-          Paid
-        </Badge>
-      );
+  /* Guest order email */
+  email?: string;
 
-    case "FAILED":
-      return (
-        <Badge variant="destructive">
-          Failed
-        </Badge>
-      );
+  /* Guest checkout information */
+  shippingAddress?: IShippingAddress;
 
-    case "REFUNDED":
-      return (
-        <Badge className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20">
-          Refunded
-        </Badge>
-      );
+  /* Existing customer structure support */
+  customer?: ICustomer;
 
-    default:
-      return (
-        <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20">
-          Pending
-        </Badge>
-      );
-  }
-};
+  items?: IOrderItem[];
 
+  totalAmount?: number;
 
-// =====================================
-// ORDER BADGE
-// =====================================
+  paymentStatus?: string;
 
-const getOrderBadge = (status: string) => {
-  switch (status) {
-    case "DELIVERED":
-      return (
-        <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20">
-          Delivered
-        </Badge>
-      );
+  bookingStatus?: string;
 
-    case "SHIPPED":
-      return (
-        <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20">
-          Shipped
-        </Badge>
-      );
+  customerType?: string;
 
-    case "PROCESSING":
-      return (
-        <Badge className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20">
-          Processing
-        </Badge>
-      );
+  createdAt?: string;
 
-    case "CONFIRMED":
-      return (
-        <Badge className="bg-cyan-500/10 text-cyan-600 hover:bg-cyan-500/20">
-          Confirmed
-        </Badge>
-      );
+  updatedAt?: string;
 
-    case "CANCELLED":
-      return (
-        <Badge variant="destructive">
-          Cancelled
-        </Badge>
-      );
+  stripeSessionId?: string;
 
-    default:
-      return (
-        <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20">
-          Pending
-        </Badge>
-      );
-  }
-};
+  stripePaymentIntentId?: string;
+}
 
+interface IOrdersMeta {
+  page?: number;
+  limit?: number;
+  total?: number;
+  totalPage?: number;
+}
 
-// =====================================
-// DATE FORMAT
-// =====================================
+interface IOrdersData {
+  data?: IOrder[];
+  meta?: IOrdersMeta;
+}
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString(
-    "en-US",
-    {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+interface IOrdersResponse {
+  success?: boolean;
+  message?: string;
+
+  data?: IOrder[] | IOrdersData;
+
+  meta?: IOrdersMeta;
+}
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+
+const fadeUp: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 12,
+  },
+
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.35,
+      ease: "easeOut",
     },
+  },
+};
+
+const stagger: Variants = {
+  hidden: {},
+
+  show: {
+    transition: {
+      staggerChildren: 0.06,
+    },
+  },
+};
+
+const cardAnimation: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 12,
+  },
+
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.35,
+      ease: "easeOut",
+    },
+  },
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const formatDate = (date?: string) => {
+  if (!date) return "N/A";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "N/A";
+  }
+
+  return parsedDate.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const formatDateTime = (date?: string) => {
+  if (!date) return "N/A";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "N/A";
+  }
+
+  return parsedDate.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+/* =========================================================
+   CUSTOMER NORMALIZER
+
+   Supports:
+   1. Guest order
+      email
+      shippingAddress.name
+      shippingAddress.phone
+      shippingAddress.address
+
+   2. Logged-in order
+      user.name
+      user.email
+      user.phone
+
+   3. Old customer structure
+      customer.name
+      customer.email
+      customer.phone
+========================================================= */
+
+const getCustomer = (order: IOrder) => {
+  const shipping = order.shippingAddress;
+
+  const name =
+    shipping?.name ||
+    order.customer?.name ||
+    order.user?.name ||
+    "Guest Customer";
+
+  const email =
+    order.email ||
+    order.customer?.email ||
+    order.user?.email ||
+    "N/A";
+
+  const phone =
+    shipping?.phone ||
+    order.customer?.phone ||
+    order.user?.phone ||
+    "N/A";
+
+  const address =
+    shipping?.address ||
+    order.customer?.address ||
+    "";
+
+  const city =
+    shipping?.city ||
+    order.customer?.city ||
+    "";
+
+  const postalCode =
+    shipping?.postalCode ||
+    order.customer?.postalCode ||
+    "";
+
+  return {
+    name,
+    email,
+    phone,
+    address,
+    city,
+    postalCode,
+  };
+};
+
+/* =========================================================
+   ADDRESS FORMATTER
+========================================================= */
+
+const getFormattedAddress = (order: IOrder) => {
+  const customer = getCustomer(order);
+
+  return [
+    customer.address,
+    customer.city,
+    customer.postalCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+};
+
+/* =========================================================
+   PAYMENT BADGE
+========================================================= */
+
+const PaymentBadge = ({
+  status,
+}: {
+  status?: string;
+}) => {
+  const value =
+    status?.toLowerCase().trim() || "pending";
+
+  const isPaid =
+    value === "paid" ||
+    value === "success" ||
+    value === "successful" ||
+    value === "completed" ||
+    value === "succeeded";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+        isPaid
+          ? "bg-emerald-50 text-emerald-700"
+          : "bg-amber-50 text-amber-700"
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          isPaid
+            ? "bg-emerald-500"
+            : "bg-amber-500"
+        }`}
+      />
+
+      {status || "Pending"}
+    </span>
   );
 };
 
+/* =========================================================
+   BOOKING BADGE
+========================================================= */
 
-// =====================================
-// TIME FORMAT
-// =====================================
+const BookingBadge = ({
+  status,
+}: {
+  status?: string;
+}) => {
+  const value =
+    status?.toLowerCase().trim() || "pending";
 
-const formatTime = (date: string) => {
-  return new Date(date).toLocaleTimeString(
-    "en-US",
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    },
+  let className =
+    "bg-slate-100 text-slate-600";
+
+  if (
+    value === "completed" ||
+    value === "confirmed" ||
+    value === "delivered"
+  ) {
+    className =
+      "bg-emerald-50 text-emerald-700";
+  }
+
+  if (
+    value === "processing" ||
+    value === "shipped"
+  ) {
+    className =
+      "bg-blue-50 text-blue-700";
+  }
+
+  if (
+    value === "cancelled" ||
+    value === "canceled"
+  ) {
+    className =
+      "bg-red-50 text-red-700";
+  }
+
+  if (value === "pending") {
+    className =
+      "bg-amber-50 text-amber-700";
+  }
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${className}`}
+    >
+      {status || "Pending"}
+    </span>
   );
 };
 
+/* =========================================================
+   EMPTY STATE
+========================================================= */
 
-// =====================================
-// ORDERS STATS
-// =====================================
+const EmptyOrdersState = ({
+  search,
+}: {
+  search: string;
+}) => {
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 10,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      className="flex min-h-[320px] flex-col items-center justify-center px-5 text-center"
+    >
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+        {search ? (
+          <Search size={25} />
+        ) : (
+          <Package size={25} />
+        )}
+      </div>
+
+      <h3 className="mt-5 text-lg font-bold text-slate-900">
+        {search
+          ? "No matching orders"
+          : "No orders found"}
+      </h3>
+
+      <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+        {search
+          ? "Try another order ID, customer name, email or phone."
+          : "There are currently no orders available."}
+      </p>
+    </motion.div>
+  );
+};
+
+/* =========================================================
+   ORDER DETAILS MODAL
+========================================================= */
+
+interface OrderDetailsModalProps {
+  order: IOrder;
+  onClose: () => void;
+}
+
+const OrderDetailsModal = ({
+  order,
+  onClose,
+}: OrderDetailsModalProps) => {
+  const customer = getCustomer(order);
+
+  const formattedAddress =
+    getFormattedAddress(order);
+
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+      }}
+      animate={{
+        opacity: 1,
+      }}
+      exit={{
+        opacity: 0,
+      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:p-5"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{
+          opacity: 0,
+          scale: 0.97,
+          y: 15,
+        }}
+        animate={{
+          opacity: 1,
+          scale: 1,
+          y: 0,
+        }}
+        exit={{
+          opacity: 0,
+          scale: 0.97,
+          y: 10,
+        }}
+        transition={{
+          duration: 0.25,
+          ease: "easeOut",
+        }}
+        onClick={(e) =>
+          e.stopPropagation()
+        }
+        className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
+
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <FileText size={17} />
+            </div>
+
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-slate-900 sm:text-lg">
+                Order Details
+              </h2>
+
+              <p className="truncate text-xs text-slate-500">
+                #{order._id}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition hover:bg-red-50 hover:text-red-500"
+          >
+            <X size={17} />
+          </button>
+        </div>
+
+        {/* =====================================================
+            BODY
+        ===================================================== */}
+
+        <div className="max-h-[calc(90vh-65px)] overflow-y-auto p-5 sm:p-6">
+          {/* ===================================================
+              CUSTOMER / SUMMARY
+          =================================================== */}
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* CUSTOMER */}
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-600 shadow-sm">
+                  <User size={16} />
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Customer
+                  </h3>
+
+                  <p className="text-[11px] text-slate-400">
+                    Customer information
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3.5">
+                {/* NAME */}
+
+                <div>
+                  <p className="text-[11px] text-slate-400">
+                    Name
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-slate-800">
+                    {customer.name}
+                  </p>
+                </div>
+
+                {/* EMAIL */}
+
+                <div className="flex gap-2.5">
+                  <Mail
+                    size={15}
+                    className="mt-0.5 shrink-0 text-slate-400"
+                  />
+
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-400">
+                      Email
+                    </p>
+
+                    <p className="mt-0.5 break-all text-xs text-slate-600">
+                      {customer.email}
+                    </p>
+                  </div>
+                </div>
+
+                {/* PHONE */}
+
+                <div className="flex gap-2.5">
+                  <Phone
+                    size={15}
+                    className="mt-0.5 shrink-0 text-slate-400"
+                  />
+
+                  <div>
+                    <p className="text-[10px] text-slate-400">
+                      Phone
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-slate-600">
+                      {customer.phone}
+                    </p>
+                  </div>
+                </div>
+
+                {/* ADDRESS */}
+
+                <div className="flex gap-2.5">
+                  <MapPin
+                    size={15}
+                    className="mt-0.5 shrink-0 text-slate-400"
+                  />
+
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-slate-400">
+                      Shipping Address
+                    </p>
+
+                    <p className="mt-0.5 text-xs leading-5 text-slate-600">
+                      {formattedAddress ||
+                        "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* GUEST BADGE */}
+
+                {order.guestId && (
+                  <div className="pt-1">
+                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700">
+                      Guest Order
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* SUMMARY */}
+
+            <div className="rounded-2xl bg-slate-900 p-5 text-white">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
+                  <Package size={16} />
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold">
+                    Order Summary
+                  </h3>
+
+                  <p className="text-[11px] text-slate-400">
+                    Order overview
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* PAYMENT */}
+
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-slate-400">
+                    Payment
+                  </span>
+
+                  <PaymentBadge
+                    status={
+                      order.paymentStatus
+                    }
+                  />
+                </div>
+
+                {/* STATUS */}
+
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-slate-400">
+                    Status
+                  </span>
+
+                  <BookingBadge
+                    status={
+                      order.bookingStatus
+                    }
+                  />
+                </div>
+
+                {/* CUSTOMER TYPE */}
+
+                {order.customerType && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-slate-400">
+                      Customer Type
+                    </span>
+
+                    <span className="text-xs font-semibold text-white">
+                      {order.customerType}
+                    </span>
+                  </div>
+                )}
+
+                {/* TOTAL */}
+
+                <div className="flex items-center justify-between border-t border-white/10 pt-4">
+                  <span className="text-xs text-slate-400">
+                    Total
+                  </span>
+
+                  <span className="text-2xl font-bold">
+                    $
+                    {Number(
+                      order.totalAmount || 0
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ===================================================
+              PRODUCTS
+          =================================================== */}
+
+          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Products
+                </h3>
+
+                <p className="mt-0.5 text-[11px] text-slate-400">
+                  {order.items?.length || 0}{" "}
+                  item(s)
+                </p>
+              </div>
+
+              <ShoppingBag
+                size={17}
+                className="text-slate-400"
+              />
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {(order.items || []).map(
+                (item, index) => {
+                  const image =
+                    item.image ||
+                    item.product?.images?.main;
+
+                  const itemTotal =
+                    item.subtotal ??
+                    Number(
+                      item.price || 0
+                    ) *
+                      Number(
+                        item.quantity || 0
+                      );
+
+                  return (
+                    <motion.div
+                      key={`${
+                        item.product?._id ||
+                        item.name ||
+                        "product"
+                      }-${index}`}
+                      initial={{
+                        opacity: 0,
+                        y: 8,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                      }}
+                      transition={{
+                        delay: index * 0.04,
+                      }}
+                      className="flex gap-3 px-5 py-4"
+                    >
+                      {/* IMAGE */}
+
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                        {image ? (
+                          <img
+                            src={image}
+                            alt={
+                              item.name ||
+                              item.product
+                                ?.name ||
+                              "Product"
+                            }
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-400">
+                            <Package
+                              size={20}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* INFO */}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-800">
+                          {item.name ||
+                            item.product?.name ||
+                            "Product"}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {item.color && (
+                            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] text-slate-500">
+                              {item.color}
+                            </span>
+                          )}
+
+                          {item.size && (
+                            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] text-slate-500">
+                              Size:{" "}
+                              {item.size}
+                            </span>
+                          )}
+
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] text-slate-500">
+                            Qty:{" "}
+                            {item.quantity || 0}
+                          </span>
+
+                          {item.price !==
+                            undefined && (
+                            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] text-slate-500">
+                              $
+                              {Number(
+                                item.price
+                              ).toFixed(2)}{" "}
+                              each
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* PRICE */}
+
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-bold text-slate-900">
+                          $
+                          {Number(
+                            itemTotal || 0
+                          ).toFixed(2)}
+                        </p>
+
+                        <p className="mt-1 text-[10px] text-slate-400">
+                          Subtotal
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                }
+              )}
+            </div>
+          </div>
+
+          {/* ===================================================
+              DATE
+          =================================================== */}
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {/* CREATED */}
+
+            <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-4 py-3.5">
+              <CalendarDays
+                size={15}
+                className="text-slate-400"
+              />
+
+              <div>
+                <p className="text-[10px] text-slate-400">
+                  Created
+                </p>
+
+                <p className="text-xs font-semibold text-slate-600">
+                  {formatDateTime(
+                    order.createdAt
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* UPDATED */}
+
+            <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-4 py-3.5">
+              <Clock3
+                size={15}
+                className="text-slate-400"
+              />
+
+              <div>
+                <p className="text-[10px] text-slate-400">
+                  Last Updated
+                </p>
+
+                <p className="text-xs font-semibold text-slate-600">
+                  {formatDateTime(
+                    order.updatedAt
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+/* =========================================================
+   MAIN
+========================================================= */
 
 const OrdersStats = () => {
-  // =====================================
-  // PAGINATION
-  // =====================================
-
   const [page, setPage] = useState(1);
 
-  const [limit, setLimit] = useState(10);
-
-
-  // =====================================
-  // FILTERS
-  // =====================================
-
-  const [searchInput, setSearchInput] =
+  const [search, setSearch] =
     useState("");
 
-  const [search, setSearch] = useState("");
+  const [selectedOrder, setSelectedOrder] =
+    useState<IOrder | null>(null);
 
-  const [paymentStatus, setPaymentStatus] =
-    useState("ALL");
+  const limit = 10;
 
-  const [bookingStatus, setBookingStatus] =
-    useState("ALL");
-
-
-  // =====================================
-  // API
-  // =====================================
+  /* =========================================================
+     API
+  ========================================================= */
 
   const {
-    data,
+    data: response,
     isLoading,
     isFetching,
     isError,
@@ -220,1096 +950,938 @@ const OrdersStats = () => {
   } = useGetAllOrdersQuery({
     page,
     limit,
-    search,
-    paymentStatus,
-    bookingStatus,
   });
 
+  /* =========================================================
+     NORMALIZE RESPONSE
+  ========================================================= */
 
-  // =====================================
-  // DATA
-  // =====================================
+  const normalizedResponse =
+    response as IOrdersResponse | undefined;
 
-  const orders = data?.data ?? [];
+  let orders: IOrder[] = [];
 
-  const meta = data?.meta;
+  let meta: IOrdersMeta = {};
 
-  const totalPages = meta?.totalPages ?? 1;
+  if (
+    Array.isArray(
+      normalizedResponse?.data
+    )
+  ) {
+    orders = normalizedResponse.data;
 
+    meta =
+      normalizedResponse.meta || {};
+  } else if (
+    normalizedResponse?.data &&
+    typeof normalizedResponse.data ===
+      "object"
+  ) {
+    const nested =
+      normalizedResponse.data as IOrdersData;
 
-  // =====================================
-  // STATISTICS
-  // =====================================
+    orders = Array.isArray(
+      nested.data
+    )
+      ? nested.data
+      : [];
 
-  const statistics = useMemo(() => {
-    const paid = orders.filter(
-      (order) =>
-        order.paymentStatus === "PAID",
-    ).length;
+    meta =
+      nested.meta ||
+      normalizedResponse.meta ||
+      {};
+  }
 
-    const pending = orders.filter(
-      (order) =>
-        order.paymentStatus === "PENDING",
-    ).length;
+  /* =========================================================
+     SEARCH
+  ========================================================= */
 
-    const revenue = orders.reduce(
-      (sum, order) =>
-        sum + Number(order.totalAmount || 0),
-      0,
-    );
+  const filteredOrders = useMemo(() => {
+    const query = search
+      .trim()
+      .toLowerCase();
 
-    return {
-      paid,
-      pending,
-      revenue,
-    };
-  }, [orders]);
-
-
-  // =====================================
-  // SEARCH
-  // =====================================
-
-  const handleSearch = () => {
-    setPage(1);
-    setSearch(searchInput.trim());
-  };
-
-
-  // =====================================
-  // SEARCH ENTER
-  // =====================================
-
-  const handleSearchKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (event.key === "Enter") {
-      handleSearch();
+    if (!query) {
+      return orders;
     }
-  };
 
+    return orders.filter(
+      (order) => {
+        const customer =
+          getCustomer(order);
 
-  // =====================================
-  // CLEAR FILTERS
-  // =====================================
-
-  const handleClearFilters = () => {
-    setSearchInput("");
-    setSearch("");
-    setPaymentStatus("ALL");
-    setBookingStatus("ALL");
-    setPage(1);
-  };
-
-
-  // =====================================
-  // PAGE SIZE
-  // =====================================
-
-  const handleLimitChange = (
-    value: number,
-  ) => {
-    setLimit(value);
-    setPage(1);
-  };
-
-
-  // =====================================
-  // PAYMENT FILTER
-  // =====================================
-
-  const handlePaymentStatusChange = (
-    value: string,
-  ) => {
-    setPaymentStatus(value);
-    setPage(1);
-  };
-
-
-  // =====================================
-  // ORDER FILTER
-  // =====================================
-
-  const handleBookingStatusChange = (
-    value: string,
-  ) => {
-    setBookingStatus(value);
-    setPage(1);
-  };
-
-
-  // =====================================
-  // PREVIOUS PAGE
-  // =====================================
-
-  const handlePrevious = () => {
-    setPage((current) =>
-      Math.max(current - 1, 1),
+        return (
+          order._id
+            ?.toLowerCase()
+            .includes(query) ||
+          customer.name
+            ?.toLowerCase()
+            .includes(query) ||
+          customer.email
+            ?.toLowerCase()
+            .includes(query) ||
+          customer.phone
+            ?.toLowerCase()
+            .includes(query) ||
+          customer.address
+            ?.toLowerCase()
+            .includes(query)
+        );
+      }
     );
-  };
+  }, [orders, search]);
 
+  /* =========================================================
+     STATS
+  ========================================================= */
 
-  // =====================================
-  // NEXT PAGE
-  // =====================================
+  const paidOrders =
+    orders.filter((order) => {
+      const status =
+        order.paymentStatus
+          ?.toLowerCase()
+          .trim();
 
-  const handleNext = () => {
-    setPage((current) =>
-      Math.min(
-        current + 1,
-        totalPages,
-      ),
+      return (
+        status === "paid" ||
+        status === "success" ||
+        status === "successful" ||
+        status === "completed" ||
+        status === "succeeded"
+      );
+    }).length;
+
+  const pendingOrders =
+    orders.length - paidOrders;
+
+  const pageRevenue =
+    orders.reduce(
+      (sum, order) =>
+        sum +
+        Number(
+          order.totalAmount || 0
+        ),
+      0
     );
-  };
 
+  const totalPages =
+    Number(meta.totalPage || 0) ||
+    Math.ceil(
+      Number(meta.total || 0) /
+        limit
+    ) ||
+    1;
 
-  // =====================================
-  // REFRESH
-  // =====================================
-
-  const handleRefresh = () => {
-    refetch();
-  };
-
-
-  // =====================================
-  // LOADING
-  // =====================================
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-5">
+      <div className="space-y-6">
+        <div className="h-44 animate-pulse rounded-2xl bg-slate-200" />
 
-        <div>
-          <div className="h-8 w-48 animate-pulse rounded-md bg-muted" />
-
-          <div className="mt-2 h-4 w-72 animate-pulse rounded-md bg-muted" />
-        </div>
-
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((item) => (
-            <Card key={item}>
-              <CardContent className="p-6">
-                <div className="h-16 animate-pulse rounded-md bg-muted" />
-              </CardContent>
-            </Card>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({
+            length: 4,
+          }).map((_, index) => (
+            <div
+              key={index}
+              className="h-32 animate-pulse rounded-2xl bg-slate-200"
+            />
           ))}
         </div>
 
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="h-12 animate-pulse rounded-md bg-muted" />
-          </CardContent>
-        </Card>
-
-
-        {[1, 2, 3].map((item) => (
-          <Card key={item}>
-            <CardContent className="p-6">
-              <div className="h-40 animate-pulse rounded-md bg-muted" />
-            </CardContent>
-          </Card>
-        ))}
-
+        <div className="h-[500px] animate-pulse rounded-2xl bg-slate-200" />
       </div>
     );
   }
 
-
-  // =====================================
-  // ERROR
-  // =====================================
+  /* =========================================================
+     ERROR
+  ========================================================= */
 
   if (isError) {
     return (
-      <div className="flex min-h-[500px] items-center justify-center p-5">
+      <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-red-100 bg-white">
+        <div className="text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+            <AlertCircle size={28} />
+          </div>
 
-        <Card className="w-full max-w-md">
+          <h2 className="mt-5 text-lg font-bold text-slate-900">
+            Failed to load orders
+          </h2>
 
-          <CardContent className="flex flex-col items-center py-12 text-center">
+          <p className="mt-2 text-sm text-slate-500">
+            Something went wrong. Please
+            try again.
+          </p>
 
-            <div className="mb-4 rounded-full bg-destructive/10 p-4">
-              <AlertCircle className="h-8 w-8 text-destructive" />
-            </div>
+          <button
+            onClick={() => refetch()}
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            <RefreshCw size={15} />
 
-
-            <h2 className="text-xl font-semibold">
-              Failed to load orders
-            </h2>
-
-
-            <p className="mt-2 text-sm text-muted-foreground">
-              Something went wrong while loading
-              customer orders.
-            </p>
-
-
-            <Button
-              onClick={handleRefresh}
-              className="mt-6"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-
-              Try Again
-            </Button>
-
-          </CardContent>
-
-        </Card>
-
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
-
-  // =====================================
-  // PAGE
-  // =====================================
+  /* =========================================================
+     UI
+  ========================================================= */
 
   return (
-    <div className="space-y-6 p-5 pb-8">
+    <div className="space-y-6 pb-10">
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-      {/* ================================= */}
-      {/* HEADER */}
-      {/* ================================= */}
+      <motion.section
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        className="relative overflow-hidden rounded-2xl bg-slate-950 px-5 py-6 text-white shadow-lg sm:px-7 sm:py-7"
+      >
+        <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-white/[0.04]" />
 
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div className="relative flex flex-col justify-between gap-5 md:flex-row md:items-center">
+          <div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-[11px] font-medium text-slate-400">
+              <ShoppingBag size={13} />
 
-        <div>
-
-          <div className="flex items-center gap-3">
-
-            <div className="rounded-xl bg-primary/10 p-2.5">
-              <ShoppingBag className="h-6 w-6 text-primary" />
+              Admin Dashboard
             </div>
 
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Orders
+            </h1>
+
+            <p className="mt-2 max-w-xl text-sm text-slate-400">
+              Manage customer orders,
+              payment status and order
+              activity.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
+              <Clock3 size={16} />
+            </div>
 
             <div>
-
-              <h1 className="text-2xl font-bold tracking-tight">
-                Orders
-              </h1>
-
-              <p className="text-sm text-muted-foreground">
-                Manage and monitor customer orders.
+              <p className="text-[10px] text-slate-500">
+                Current Page
               </p>
 
+              <p className="text-sm font-semibold">
+                Page {meta.page || page}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* =====================================================
+          STAT CARDS
+      ===================================================== */}
+
+      <motion.div
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        {/* TOTAL */}
+
+        <motion.div
+          variants={cardAnimation}
+          whileHover={{
+            y: -3,
+          }}
+          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">
+                Total Orders
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {meta.total ??
+                  orders.length}
+              </p>
             </div>
 
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+              <ShoppingBag size={18} />
+            </div>
           </div>
 
-        </div>
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-slate-400">
+            <ArrowUp size={12} />
 
+            All orders
+          </p>
+        </motion.div>
 
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={isFetching}
+        {/* PAID */}
+
+        <motion.div
+          variants={cardAnimation}
+          whileHover={{
+            y: -3,
+          }}
+          className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
         >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${
-              isFetching
-                ? "animate-spin"
-                : ""
-            }`}
-          />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">
+                Paid Orders
+              </p>
 
-          Refresh
-        </Button>
-
-      </div>
-
-
-      {/* ================================= */}
-      {/* STATISTICS */}
-      {/* ================================= */}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
-        {/* Total */}
-
-        <Card>
-          <CardContent className="p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-sm text-muted-foreground">
-                  Total Orders
-                </p>
-
-                <p className="mt-1 text-2xl font-bold">
-                  {meta?.total ?? 0}
-                </p>
-
-              </div>
-
-
-              <div className="rounded-xl bg-primary/10 p-3">
-                <ShoppingBag className="h-5 w-5 text-primary" />
-              </div>
-
+              <p className="mt-2 text-2xl font-bold text-emerald-600">
+                {paidOrders}
+              </p>
             </div>
 
-          </CardContent>
-        </Card>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <DollarSign size={18} />
+            </div>
+          </div>
 
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-emerald-600">
+            <ArrowUp size={12} />
 
-        {/* Paid */}
+            Successful payments
+          </p>
+        </motion.div>
 
-        <Card>
-          <CardContent className="p-5">
+        {/* PENDING */}
 
-            <div className="flex items-center justify-between">
+        <motion.div
+          variants={cardAnimation}
+          whileHover={{
+            y: -3,
+          }}
+          className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">
+                Pending Orders
+              </p>
 
-              <div>
-
-                <p className="text-sm text-muted-foreground">
-                  Paid Orders
-                </p>
-
-                <p className="mt-1 text-2xl font-bold">
-                  {statistics.paid}
-                </p>
-
-              </div>
-
-
-              <div className="rounded-xl bg-emerald-500/10 p-3">
-                <Package className="h-5 w-5 text-emerald-600" />
-              </div>
-
+              <p className="mt-2 text-2xl font-bold text-amber-600">
+                {pendingOrders}
+              </p>
             </div>
 
-          </CardContent>
-        </Card>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <Clock3 size={18} />
+            </div>
+          </div>
 
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-amber-600">
+            <ArrowDown size={12} />
 
-        {/* Pending */}
+            Awaiting payment
+          </p>
+        </motion.div>
 
-        <Card>
-          <CardContent className="p-5">
+        {/* REVENUE */}
 
-            <div className="flex items-center justify-between">
+        <motion.div
+          variants={cardAnimation}
+          whileHover={{
+            y: -3,
+          }}
+          className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-500">
+                Page Revenue
+              </p>
 
-              <div>
-
-                <p className="text-sm text-muted-foreground">
-                  Pending Payment
-                </p>
-
-                <p className="mt-1 text-2xl font-bold">
-                  {statistics.pending}
-                </p>
-
-              </div>
-
-
-              <div className="rounded-xl bg-amber-500/10 p-3">
-                <Clock3 className="h-5 w-5 text-amber-600" />
-              </div>
-
+              <p className="mt-2 text-2xl font-bold text-blue-600">
+                ${pageRevenue.toFixed(2)}
+              </p>
             </div>
 
-          </CardContent>
-        </Card>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <DollarSign size={18} />
+            </div>
+          </div>
 
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-blue-600">
+            <ArrowUp size={12} />
 
-        {/* Revenue */}
+            Current page
+          </p>
+        </motion.div>
+      </motion.div>
 
-        <Card>
-          <CardContent className="p-5">
+      {/* =====================================================
+          ORDERS TABLE
+      ===================================================== */}
 
-            <div className="flex items-center justify-between">
+      <motion.section
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
+        {/* TOOLBAR */}
+
+        <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                <FileText size={17} />
+              </div>
 
               <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  All Orders
+                </h2>
 
-                <p className="text-sm text-muted-foreground">
-                  Current Page Revenue
+                <p className="mt-0.5 text-xs text-slate-500">
+                  View and manage customer
+                  orders
                 </p>
-
-                <p className="mt-1 text-2xl font-bold">
-                  ${statistics.revenue.toFixed(2)}
-                </p>
-
               </div>
-
-
-              <div className="rounded-xl bg-blue-500/10 p-3">
-                <Truck className="h-5 w-5 text-blue-600" />
-              </div>
-
             </div>
 
-          </CardContent>
-        </Card>
+            <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+              {/* SEARCH */}
 
-      </div>
-
-
-      {/* ================================= */}
-      {/* FILTERS */}
-      {/* ================================= */}
-
-      <Card>
-
-        <CardContent className="p-4">
-
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
-
-            {/* SEARCH */}
-
-            <div className="flex flex-1 gap-2">
-
-              <div className="relative flex-1">
-
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-                <Input
-                  value={searchInput}
-                  onChange={(event) =>
-                    setSearchInput(
-                      event.target.value,
-                    )
-                  }
-                  onKeyDown={
-                    handleSearchKeyDown
-                  }
-                  placeholder="Search customer, email or phone..."
-                  className="pl-9"
+              <div className="relative w-full sm:w-[280px]">
+                <Search
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                 />
 
+                <input
+                  value={search}
+                  onChange={(e) =>
+                    setSearch(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Search orders..."
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-xs font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
+                />
               </div>
 
+              {/* REFRESH */}
 
-              <Button
-                onClick={handleSearch}
+              <button
+                onClick={() => refetch()}
                 disabled={isFetching}
+                className="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
               >
-                Search
-              </Button>
+                <RefreshCw
+                  size={14}
+                  className={
+                    isFetching
+                      ? "animate-spin"
+                      : ""
+                  }
+                />
 
+                Refresh
+              </button>
             </div>
-
-
-            {/* PAYMENT */}
-
-            <select
-              value={paymentStatus}
-              onChange={(event) =>
-                handlePaymentStatusChange(
-                  event.target.value,
-                )
-              }
-              className="h-10 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-            >
-              {PAYMENT_STATUSES.map(
-                (status) => (
-                  <option
-                    key={status}
-                    value={status}
-                  >
-                    Payment: {status}
-                  </option>
-                ),
-              )}
-            </select>
-
-
-            {/* ORDER STATUS */}
-
-            <select
-              value={bookingStatus}
-              onChange={(event) =>
-                handleBookingStatusChange(
-                  event.target.value,
-                )
-              }
-              className="h-10 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-            >
-              {ORDER_STATUSES.map(
-                (status) => (
-                  <option
-                    key={status}
-                    value={status}
-                  >
-                    Order: {status}
-                  </option>
-                ),
-              )}
-            </select>
-
-
-            {/* CLEAR */}
-
-            {(search ||
-              paymentStatus !== "ALL" ||
-              bookingStatus !== "ALL") && (
-              <Button
-                variant="outline"
-                onClick={handleClearFilters}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Clear
-              </Button>
-            )}
-
           </div>
 
-        </CardContent>
+          {/* FETCHING */}
 
-      </Card>
-
-
-      {/* ================================= */}
-      {/* FETCHING INDICATOR */}
-      {/* ================================= */}
-
-      {isFetching && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-
-          <RefreshCw className="h-4 w-4 animate-spin" />
-
-          Updating orders...
-
-        </div>
-      )}
-
-
-      {/* ================================= */}
-      {/* NO ORDERS */}
-      {/* ================================= */}
-
-      {orders.length === 0 ? (
-
-        <Card>
-
-          <CardContent className="flex min-h-[350px] flex-col items-center justify-center text-center">
-
-            <div className="rounded-full bg-muted p-5">
-              <Package className="h-10 w-10 text-muted-foreground" />
+          {isFetching && (
+            <div className="mt-4 h-0.5 overflow-hidden rounded-full bg-slate-100">
+              <motion.div
+                animate={{
+                  x: [
+                    "-100%",
+                    "300%",
+                  ],
+                }}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+                className="h-full w-1/3 rounded-full bg-slate-700"
+              />
             </div>
-
-
-            <h3 className="mt-5 text-lg font-semibold">
-              No orders found
-            </h3>
-
-
-            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              No customer orders match your
-              current search or filters.
-            </p>
-
-
-            {(search ||
-              paymentStatus !== "ALL" ||
-              bookingStatus !== "ALL") && (
-              <Button
-                variant="outline"
-                className="mt-5"
-                onClick={handleClearFilters}
-              >
-                Clear Filters
-              </Button>
-            )}
-
-          </CardContent>
-
-        </Card>
-
-      ) : (
-
-        /* ================================= */
-        /* ORDERS */
-        /* ================================= */
-
-        <div className="space-y-4">
-
-          {orders.map((order) => (
-
-            <Card
-              key={order._id}
-              className="overflow-hidden transition-shadow hover:shadow-md"
-            >
-
-              {/* ORDER HEADER */}
-
-              <CardHeader className="border-b bg-muted/20 px-5 py-4">
-
-                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-
-                  <div className="flex items-center gap-3">
-
-                    <div className="rounded-lg bg-primary/10 p-2">
-                      <Package className="h-5 w-5 text-primary" />
-                    </div>
-
-
-                    <div>
-
-                      <CardTitle className="text-base">
-                        Order #
-                        {order._id
-                          .slice(-8)
-                          .toUpperCase()}
-                      </CardTitle>
-
-
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {formatDate(
-                          order.createdAt,
-                        )}{" "}
-                        •{" "}
-                        {formatTime(
-                          order.createdAt,
-                        )}
-                      </p>
-
-                    </div>
-
-                  </div>
-
-
-                  <div className="flex flex-wrap gap-2">
-
-                    {getPaymentBadge(
-                      order.paymentStatus,
-                    )}
-
-                    {getOrderBadge(
-                      order.bookingStatus,
-                    )}
-
-                  </div>
-
-                </div>
-
-              </CardHeader>
-
-
-              {/* ORDER BODY */}
-
-              <CardContent className="p-5">
-
-                <div className="grid gap-6 lg:grid-cols-[1fr_1fr_auto]">
-
-                  {/* ================================= */}
-                  {/* CUSTOMER */}
-                  {/* ================================= */}
-
-                  <div>
-
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Customer
-                    </p>
-
-
-                    <div className="space-y-3">
-
-                      {/* NAME */}
-
-                      <div className="flex items-center gap-3">
-
-                        <div className="rounded-full bg-muted p-2">
-                          <User className="h-4 w-4" />
-                        </div>
-
-
-                        <div>
-
-                          <p className="text-sm font-medium">
-                            {order.user?.name ??
-                              order.shippingAddress
-                                ?.name ??
-                              "Unknown Customer"}
-                          </p>
-
-
-                          <p className="text-xs text-muted-foreground">
-                            Customer
-                          </p>
-
-                        </div>
-
-                      </div>
-
-
-                      {/* EMAIL */}
-
-                      {order.user?.email && (
-                        <div className="flex items-center gap-3 text-sm">
-
-                          <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
-
-                          <span className="truncate">
-                            {order.user.email}
-                          </span>
-
-                        </div>
-                      )}
-
-
-                      {/* PHONE */}
-
-                      {(order.user?.phone ||
-                        order.shippingAddress
-                          ?.phone) && (
-
-                        <div className="flex items-center gap-3 text-sm">
-
-                          <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
-
-                          <span>
-                            {order.user?.phone ||
-                              order.shippingAddress
-                                ?.phone}
-                          </span>
-
-                        </div>
-                      )}
-
-                    </div>
-
-                  </div>
-
-
-                  {/* ================================= */}
-                  {/* DELIVERY */}
-                  {/* ================================= */}
-
-                  <div>
-
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Delivery Address
-                    </p>
-
-
-                    <div className="flex gap-3">
-
-                      <div className="rounded-full bg-muted p-2">
-                        <MapPin className="h-4 w-4" />
-                      </div>
-
-
-                      <div className="text-sm">
-
-                        <p className="font-medium">
-                          {order.shippingAddress
-                            ?.address ||
-                            "Address not available"}
-                        </p>
-
-
-                        {order.shippingAddress
-                          ?.city && (
-
-                          <p className="mt-1 text-muted-foreground">
-                            {
-                              order.shippingAddress
-                                .city
-                            }
-
-                            {order
-                              .shippingAddress
-                              .postalCode &&
-                              ` - ${order.shippingAddress.postalCode}`}
-                          </p>
-                        )}
-
-
-                        {order.shippingAddress
-                          ?.country && (
-
-                          <p className="text-muted-foreground">
-                            {
-                              order
-                                .shippingAddress
-                                .country
-                            }
-                          </p>
-                        )}
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* ================================= */}
-                  {/* AMOUNT */}
-                  {/* ================================= */}
-
-                  <div className="rounded-xl border bg-muted/20 p-4 lg:min-w-[180px]">
-
-                    <p className="text-xs text-muted-foreground">
-                      Order Total
-                    </p>
-
-
-                    <p className="mt-1 text-2xl font-bold">
-                      $
-                      {Number(
-                        order.totalAmount || 0,
-                      ).toFixed(2)}
-                    </p>
-
-
-                    <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-
-                      <ShoppingBag className="h-3.5 w-3.5" />
-
-                      {order.items?.length ?? 0}{" "}
-
-                      {order.items?.length === 1
-                        ? "product"
-                        : "products"}
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-
-                {/* ================================= */}
-                {/* PRODUCTS */}
-                {/* ================================= */}
-
-                {order.items?.length > 0 && (
-
-                  <div className="mt-6 border-t pt-5">
-
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Ordered Products
-                    </p>
-
-
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-
-                      {order.items.map(
-                        (item, index) => (
-
-                          <div
-                            key={`${order._id}-${index}`}
-                            className="flex gap-3 rounded-xl border p-3"
-                          >
-
-                            {/* IMAGE */}
-
-                            {item.image ? (
-
-                              <img
-                                src={item.image}
-                                alt={item.name}
-                                className="h-16 w-16 shrink-0 rounded-lg object-cover"
+          )}
+        </div>
+
+        {/* ===================================================
+            DESKTOP
+        =================================================== */}
+
+        <div className="hidden overflow-x-auto lg:block">
+          {filteredOrders.length >
+          0 ? (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70">
+                  <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Order
+                  </th>
+
+                  <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Customer
+                  </th>
+
+                  <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Date
+                  </th>
+
+                  <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Amount
+                  </th>
+
+                  <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Payment
+                  </th>
+
+                  <th className="px-5 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Status
+                  </th>
+
+                  <th className="px-5 py-4 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredOrders.map(
+                  (order) => {
+                    const customer =
+                      getCustomer(order);
+
+                    return (
+                      <motion.tr
+                        key={order._id}
+                        initial={{
+                          opacity: 0,
+                        }}
+                        animate={{
+                          opacity: 1,
+                        }}
+                        transition={{
+                          duration: 0.25,
+                        }}
+                        className="group border-b border-slate-100 transition-colors hover:bg-slate-50/70"
+                      >
+                        {/* ORDER */}
+
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition group-hover:bg-slate-900 group-hover:text-white">
+                              <ShoppingBag
+                                size={15}
                               />
-
-                            ) : (
-
-                              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted">
-
-                                <Package className="h-6 w-6 text-muted-foreground" />
-
-                              </div>
-                            )}
-
-
-                            {/* INFO */}
-
-                            <div className="min-w-0 flex-1">
-
-                              <p className="truncate text-sm font-medium">
-                                {item.name}
-                              </p>
-
-
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Qty:{" "}
-                                {item.quantity}
-                              </p>
-
-
-                              {(item.size ||
-                                item.color) && (
-
-                                <p className="text-xs text-muted-foreground">
-
-                                  {item.size &&
-                                    `Size: ${item.size}`}
-
-                                  {item.size &&
-                                    item.color &&
-                                    " • "}
-
-                                  {item.color &&
-                                    `Color: ${item.color}`}
-
-                                </p>
-                              )}
-
-
-                              <p className="mt-1 text-sm font-semibold">
-                                $
-                                {Number(
-                                  item.subtotal ??
-                                    item.price *
-                                      item.quantity,
-                                ).toFixed(2)}
-                              </p>
-
                             </div>
 
+                            <div className="min-w-0">
+                              <p className="max-w-[150px] truncate text-xs font-bold text-slate-800">
+                                #
+                                {
+                                  order._id
+                                }
+                              </p>
+
+                              <p className="mt-1 text-[10px] text-slate-400">
+                                {order.items
+                                  ?.length ||
+                                  0}{" "}
+                                item(s)
+                              </p>
+                            </div>
                           </div>
+                        </td>
 
-                        ),
-                      )}
+                        {/* CUSTOMER */}
 
+                        <td className="px-5 py-4">
+                          <p className="max-w-[170px] truncate text-xs font-semibold text-slate-800">
+                            {
+                              customer.name
+                            }
+                          </p>
+
+                          <p className="mt-1 max-w-[180px] truncate text-[10px] text-slate-400">
+                            {
+                              customer.email
+                            }
+                          </p>
+
+                          <p className="mt-1 max-w-[180px] truncate text-[10px] text-slate-400">
+                            {
+                              customer.phone
+                            }
+                          </p>
+                        </td>
+
+                        {/* DATE */}
+
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <CalendarDays
+                              size={13}
+                              className="text-slate-400"
+                            />
+
+                            {formatDate(
+                              order.createdAt
+                            )}
+                          </div>
+                        </td>
+
+                        {/* AMOUNT */}
+
+                        <td className="px-5 py-4">
+                          <span className="text-xs font-bold text-slate-800">
+                            $
+                            {Number(
+                              order.totalAmount ||
+                                0
+                            ).toFixed(
+                              2
+                            )}
+                          </span>
+                        </td>
+
+                        {/* PAYMENT */}
+
+                        <td className="px-5 py-4">
+                          <PaymentBadge
+                            status={
+                              order.paymentStatus
+                            }
+                          />
+                        </td>
+
+                        {/* STATUS */}
+
+                        <td className="px-5 py-4">
+                          <BookingBadge
+                            status={
+                              order.bookingStatus
+                            }
+                          />
+                        </td>
+
+                        {/* ACTION */}
+
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            onClick={() =>
+                              setSelectedOrder(
+                                order
+                              )
+                            }
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition hover:bg-slate-900 hover:text-white"
+                          >
+                            <Eye
+                              size={
+                                14
+                              }
+                            />
+                          </button>
+                        </td>
+                      </motion.tr>
+                    );
+                  }
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <EmptyOrdersState
+              search={search}
+            />
+          )}
+        </div>
+
+        {/* ===================================================
+            MOBILE
+        =================================================== */}
+
+        <div className="space-y-3 p-4 lg:hidden sm:p-5">
+          {filteredOrders.length >
+          0 ? (
+            filteredOrders.map(
+              (order) => {
+                const customer =
+                  getCustomer(order);
+
+                return (
+                  <motion.div
+                    key={order._id}
+                    initial={{
+                      opacity: 0,
+                      y: 8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    className="rounded-xl border border-slate-200 p-4"
+                  >
+                    {/* HEADER */}
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                          <ShoppingBag
+                            size={15}
+                          />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-slate-800">
+                            #
+                            {
+                              order._id
+                            }
+                          </p>
+
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            {formatDate(
+                              order.createdAt
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          setSelectedOrder(
+                            order
+                          )
+                        }
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition hover:bg-slate-900 hover:text-white"
+                      >
+                        <Eye
+                          size={14}
+                        />
+                      </button>
                     </div>
 
-                  </div>
-                )}
+                    <div className="my-4 h-px bg-slate-100" />
 
-              </CardContent>
+                    {/* CUSTOMER */}
 
-            </Card>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-slate-400">
+                          Customer
+                        </p>
 
-          ))}
+                        <p className="mt-1 truncate text-xs font-semibold text-slate-700">
+                          {
+                            customer.name
+                          }
+                        </p>
 
+                        <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                          {
+                            customer.email
+                          }
+                        </p>
+
+                        <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                          {
+                            customer.phone
+                          }
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400">
+                          Amount
+                        </p>
+
+                        <p className="mt-1 text-sm font-bold text-slate-800">
+                          $
+                          {Number(
+                            order.totalAmount ||
+                              0
+                          ).toFixed(
+                            2
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* BADGES */}
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <PaymentBadge
+                        status={
+                          order.paymentStatus
+                        }
+                      />
+
+                      <BookingBadge
+                        status={
+                          order.bookingStatus
+                        }
+                      />
+                    </div>
+
+                    {/* ADDRESS */}
+
+                    {getFormattedAddress(
+                      order
+                    ) && (
+                      <div className="mt-3 flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2.5">
+                        <MapPin
+                          size={13}
+                          className="mt-0.5 shrink-0 text-slate-400"
+                        />
+
+                        <p className="text-[10px] leading-4 text-slate-500">
+                          {getFormattedAddress(
+                            order
+                          )}
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              }
+            )
+          ) : (
+            <EmptyOrdersState
+              search={search}
+            />
+          )}
         </div>
-      )}
 
+        {/* ===================================================
+            PAGINATION
+        =================================================== */}
 
-      {/* ================================= */}
-      {/* PAGINATION */}
-      {/* ================================= */}
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p className="text-xs text-slate-500">
+            Showing{" "}
+            <span className="font-semibold text-slate-700">
+              {filteredOrders.length}
+            </span>{" "}
+            orders
+          </p>
 
-      {meta && meta.total > 0 && (
+          <div className="flex items-center gap-1.5">
+            {/* PREVIOUS */}
 
-        <Card>
-
-          <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
-
-            {/* RESULT INFO */}
-
-            <div className="text-sm text-muted-foreground">
-
-              Showing{" "}
-
-              <span className="font-medium text-foreground">
-                {(page - 1) * limit + 1}
-              </span>
-
-              {" "} - {" "}
-
-              <span className="font-medium text-foreground">
-                {Math.min(
-                  page * limit,
-                  meta.total,
-                )}
-              </span>
-
-              {" "} of {" "}
-
-              <span className="font-medium text-foreground">
-                {meta.total}
-              </span>
-
-              {" "} orders
-
-            </div>
-
-
-            {/* PAGINATION CONTROLS */}
-
-            <div className="flex flex-wrap items-center gap-2">
-
-              {/* PAGE SIZE */}
-
-              <select
-                value={limit}
-                onChange={(event) =>
-                  handleLimitChange(
-                    Number(
-                      event.target.value,
-                    ),
+            <button
+              disabled={page <= 1}
+              onClick={() =>
+                setPage((prev) =>
+                  Math.max(
+                    1,
+                    prev - 1
                   )
-                }
-                className="h-9 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
+                )
+              }
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft
+                size={15}
+              />
+            </button>
 
-                {PAGE_SIZE_OPTIONS.map(
-                  (size) => (
-                    <option
-                      key={size}
-                      value={size}
-                    >
-                      {size} / page
-                    </option>
-                  ),
-                )}
+            {/* PAGES */}
 
-              </select>
+            {Array.from(
+              {
+                length: Math.min(
+                  totalPages,
+                  5
+                ),
+              },
+              (_, index) =>
+                index + 1
+            ).map(
+              (pageNumber) => (
+                <button
+                  key={
+                    pageNumber
+                  }
+                  onClick={() =>
+                    setPage(
+                      pageNumber
+                    )
+                  }
+                  className={`flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-semibold transition ${
+                    page ===
+                    pageNumber
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  {
+                    pageNumber
+                  }
+                </button>
+              )
+            )}
 
+            {/* NEXT */}
 
-              {/* PREVIOUS */}
+            <button
+              disabled={
+                page >=
+                totalPages
+              }
+              onClick={() =>
+                setPage((prev) =>
+                  Math.min(
+                    totalPages,
+                    prev + 1
+                  )
+                )
+              }
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronRight
+                size={15}
+              />
+            </button>
+          </div>
+        </div>
+      </motion.section>
 
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={
-                  handlePrevious
-                }
-                disabled={
-                  page === 1 ||
-                  isFetching
-                }
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+      {/* =====================================================
+          MODAL
+      ===================================================== */}
 
-
-              {/* CURRENT PAGE */}
-
-              <div className="flex h-9 min-w-10 items-center justify-center rounded-md border px-3 text-sm font-medium">
-                {page}
-              </div>
-
-
-              <span className="text-sm text-muted-foreground">
-                of {totalPages}
-              </span>
-
-
-              {/* NEXT */}
-
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleNext}
-                disabled={
-                  page >= totalPages ||
-                  isFetching
-                }
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-
-            </div>
-
-          </CardContent>
-
-        </Card>
-      )}
-
+      <AnimatePresence>
+        {selectedOrder && (
+          <OrderDetailsModal
+            order={
+              selectedOrder
+            }
+            onClose={() =>
+              setSelectedOrder(
+                null
+              )
+            }
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
-
 
 export default OrdersStats;
 

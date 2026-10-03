@@ -1,97 +1,61 @@
-
 import { baseApi } from "@/redux/baseApi";
-import type { IBookingStats, IPaymentStats, IProductStats, IStatsResponse, IUserOverviewStats } from "@/types/admin.stats.types";
-
-
-/* =========================================================
-   STATS API
-========================================================= */
+import type {
+  IAdminStats,
+  IStatsResponse,
+} from "@/types/admin.stats.types";
 
 export const StatsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-
     /* ==========================================
-       USER OVERVIEW
+       ADMIN STATS
     ========================================== */
 
-    getUserOverviewStats:
-      build.query<
-        IStatsResponse<IUserOverviewStats>,
-        void
-      >({
-        query: () => ({
-          url: "/stats/user-overview",
-          method: "GET",
-        }),
-
-        providesTags: ["USER"],
+    getAdminStats: build.query<
+      IStatsResponse<IAdminStats>,
+      void
+    >({
+      query: () => ({
+        url: "/stats/admin",
+        method: "GET",
       }),
 
+      providesTags: [
+        "USER",
+        "PRODUCT",
+        "BOOKING",
+      ],
+    }),
 
     /* ==========================================
-       PRODUCT STATS
+       ALL ORDERS
+       GET /stats/orders?page=1&limit=10
     ========================================== */
 
-    getProductStats:
-      build.query<
-        IStatsResponse<IProductStats>,
-        void
-      >({
-        query: () => ({
-          url: "/stats/product",
-          method: "GET",
-        }),
-
-        providesTags: ["PRODUCT"],
+    getAllOrders: build.query<
+      any,
+      {
+        page?: number;
+        limit?: number;
+      }
+    >({
+      query: ({
+        page = 1,
+        limit = 10,
+      }) => ({
+        url: "/stats/orders",
+        method: "GET",
+        params: {
+          page,
+          limit,
+        },
       }),
 
-
-    /* ==========================================
-       BOOKING STATS
-    ========================================== */
-
-    getBookingStats:
-      build.query<
-        IStatsResponse<IBookingStats>,
-        void
-      >({
-        query: () => ({
-          url: "/stats/booking",
-          method: "GET",
-        }),
-
-        providesTags: ["BOOKING"],
-      }),
-
-
-    /* ==========================================
-       PAYMENT STATS
-    ========================================== */
-
-    getPaymentStats:
-      build.query<
-        IStatsResponse<IPaymentStats>,
-        void
-      >({
-        query: () => ({
-          url: "/stats/payment",
-          method: "GET",
-        }),
-
-        providesTags: ["BOOKING"],
-      }),
-
+      providesTags: ["BOOKING"],
+    }),
   }),
 });
 
-
-/* =========================================================
-   HOOKS
-========================================================= */
-
 export const {
-  useGetUserOverviewStatsQuery,
-  useGetProductStatsQuery,
-  useGetBookingStatsQuery,
-  useGetPaymentStatsQuery,
+  useGetAdminStatsQuery,
+  useGetAllOrdersQuery,
 } = StatsApi;

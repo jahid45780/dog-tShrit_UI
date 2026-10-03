@@ -2,7 +2,9 @@ import AddProduct from "@/components/modules/admin/AddProduct";
 import AdminDashboard from "@/components/modules/admin/AdminDashboard";
 import OrdersStats from "@/components/modules/admin/OrdersStats";
 import ProductAll from "@/components/modules/admin/ProductAll";
+import SeoAudit from "@/components/modules/admin/SeoAudit";
 import SystemHealth from "@/components/modules/admin/SystemHealth";
+import TrackingSettings from "@/components/modules/admin/TrackingSettings";
 import UserManagement from "@/components/modules/admin/UserManagement";
 import type { ISidebarItem } from "@/types";
 
@@ -65,6 +67,28 @@ export const adminSidebarItems:ISidebarItem[] = [
         title: "webSite Health ",
         url: "/admin/system-health",
         component: SystemHealth,
+      },
+    ],
+  },
+
+    {
+    title: "SEO",
+    items: [
+      {
+        title: "SEO Audit",
+        url: "/admin/seo-audit",
+        component: SeoAudit,
+      },
+    ],
+  },
+
+    {
+    title: "Tracking Settings",
+    items: [
+      {
+        title: "Tracking Settings",
+        url: "/admin/tracking",
+        component: TrackingSettings,
       },
     ],
   },

@@ -1,5 +1,5 @@
 import BestSellingTShirts from "./Features/BestSellingTShirts";
-import ShopByCollection from "./Features/Collection";
+// import ShopByCollection from "./Features/Collection";
 import CustomerReviews from "./Features/CustomerReviews";
 import HeroSection from "./Features/HeroSection";
 import NewsletterCTA from "./Features/NewsletterCTA";
@@ -12,7 +12,6 @@ const HomePage = () => {
         <div>
            <HeroSection/>
            <TrendingProducts/>
-           <ShopByCollection/>
            <BestSellingTShirts/>
            <WhyChooseUs/>
            <CustomerReviews/>

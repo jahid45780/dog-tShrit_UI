@@ -2,15 +2,14 @@
 import {
   AlertTriangle,
   ArrowUpRight,
-  Box,
   CheckCircle2,
   Clock3,
   CreditCard,
   Package,
   ShoppingBag,
-  Star,
   TrendingUp,
   Users,
+  UserRound,
   XCircle,
 } from "lucide-react";
 
@@ -34,83 +33,33 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useGetBookingStatsQuery, useGetPaymentStatsQuery, useGetProductStatsQuery, useGetUserOverviewStatsQuery } from "@/redux/features/stats/adminStats/admin.stats.api";
+
+import {
+  useGetAdminStatsQuery,
+} from "@/redux/features/stats/adminStats/admin.stats.api";
 
 
-
-
+/* =========================================================
+   ADMIN DASHBOARD
+========================================================= */
 
 const AdminDashboard = () => {
-
   /* =========================================================
      API
   ========================================================= */
 
   const {
-    data: userResponse,
-    isLoading: userLoading,
-    isError: userError,
-  } = useGetUserOverviewStatsQuery();
-
-
-  const {
-    data: productResponse,
-    isLoading: productLoading,
-    isError: productError,
-  } = useGetProductStatsQuery();
-
-
-  const {
-    data: bookingResponse,
-    isLoading: bookingLoading,
-    isError: bookingError,
-  } = useGetBookingStatsQuery();
-
-
-  const {
-    data: paymentResponse,
-    isLoading: paymentLoading,
-    isError: paymentError,
-  } = useGetPaymentStatsQuery();
-
-
-  /* =========================================================
-     LOADING
-  ========================================================= */
-
-  const isLoading =
-    userLoading ||
-    productLoading ||
-    bookingLoading ||
-    paymentLoading;
-
-
-  /* =========================================================
-     ERROR
-  ========================================================= */
-
-  const hasError =
-    userError ||
-    productError ||
-    bookingError ||
-    paymentError;
+    data: response,
+    isLoading,
+    isError,
+  } = useGetAdminStatsQuery();
 
 
   /* =========================================================
      DATA
   ========================================================= */
 
-  const users =
-    userResponse?.data;
-
-  const products =
-    productResponse?.data;
-
-  const bookings =
-    bookingResponse?.data;
-
-  const payments =
-    paymentResponse?.data;
+  const stats = response?.data;
 
 
   /* =========================================================
@@ -120,29 +69,25 @@ const AdminDashboard = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#f8f9fb]">
-
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          
 
+          {/* Header Skeleton */}
           <div className="mb-6">
-
             <div className="h-9 w-64 animate-pulse rounded-lg bg-gray-200" />
 
             <div className="mt-3 h-4 w-96 animate-pulse rounded bg-gray-200" />
-
           </div>
 
 
+          {/* Stats Skeleton */}
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
 
             {Array.from({ length: 8 }).map(
               (_, index) => (
-
                 <Card
                   key={index}
                   className="rounded-3xl border-0 shadow-sm"
                 >
-
                   <CardContent className="p-6">
 
                     <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
@@ -152,15 +97,14 @@ const AdminDashboard = () => {
                     <div className="mt-3 h-3 w-32 animate-pulse rounded bg-gray-200" />
 
                   </CardContent>
-
                 </Card>
-
               ),
             )}
 
           </div>
 
 
+          {/* Chart Skeleton */}
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
 
             <div className="h-[380px] animate-pulse rounded-3xl bg-gray-200" />
@@ -170,7 +114,6 @@ const AdminDashboard = () => {
           </div>
 
         </div>
-
       </div>
     );
   }
@@ -180,13 +123,7 @@ const AdminDashboard = () => {
      ERROR UI
   ========================================================= */
 
-  if (
-    hasError ||
-    !users ||
-    !products ||
-    !bookings ||
-    !payments
-  ) {
+  if (isError || !stats) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center bg-[#f8f9fb] px-4">
 
@@ -201,7 +138,8 @@ const AdminDashboard = () => {
             </h2>
 
             <p className="mt-2 text-sm text-gray-500">
-              Some dashboard statistics could not be loaded.
+              Dashboard statistics could not be loaded.
+              Please try again.
             </p>
 
           </CardContent>
@@ -214,47 +152,21 @@ const AdminDashboard = () => {
 
 
   /* =========================================================
-     USER ROLE CHART
-  ========================================================= */
-
-  const userRoleChartData =
-    users.usersByRole.map(
-      (item:any) => ({
-        name: item._id,
-        value: item.count,
-      }),
-    );
-
-
-  /* =========================================================
-     PRODUCT CATEGORY CHART
-  ========================================================= */
-
-  const productCategoryChartData =
-    products.productsByCategory.map(
-      (item:any) => ({
-        name: item._id || "Unknown",
-        value: item.count,
-      }),
-    );
-
-
-  /* =========================================================
-     BOOKING STATUS CHART
+     ORDER STATUS CHART
   ========================================================= */
 
   const bookingStatusChartData = [
     {
       name: "Confirmed",
-      value: bookings.confirmedBookings,
+      value: stats.confirmedBookings,
     },
     {
       name: "Pending",
-      value: bookings.pendingBookings,
+      value: stats.pendingBookings,
     },
     {
       name: "Cancelled",
-      value: bookings.cancelledBookings,
+      value: stats.cancelledBookings,
     },
   ];
 
@@ -266,17 +178,29 @@ const AdminDashboard = () => {
   const paymentStatusChartData = [
     {
       name: "Paid",
-      value: payments.paidPayments,
+      value: stats.paidOrders,
     },
     {
       name: "Pending",
-      value: payments.pendingPayments,
+      value: stats.pendingPayments,
     },
     {
       name: "Failed",
-      value: payments.failedPayments,
+      value: stats.failedPayments,
     },
   ];
+
+
+  /* =========================================================
+     MONTHLY CHART
+  ========================================================= */
+
+  const monthlyChartData =
+    stats.monthlyStats?.map((item) => ({
+      name: `${item.month}/${item.year}`,
+      orders: item.orders,
+      revenue: item.revenue,
+    })) || [];
 
 
   /* =========================================================
@@ -286,7 +210,7 @@ const AdminDashboard = () => {
   const formatCurrency = (
     value: number,
   ) => {
-    return `$${Number(value).toFixed(2)}`;
+    return `$${Number(value || 0).toFixed(2)}`;
   };
 
 
@@ -297,7 +221,6 @@ const AdminDashboard = () => {
   const formatDate = (
     date?: string,
   ) => {
-
     if (!date) {
       return "N/A";
     }
@@ -309,6 +232,21 @@ const AdminDashboard = () => {
         month: "short",
         day: "numeric",
       },
+    );
+  };
+
+
+  /* =========================================================
+     CUSTOMER TYPE
+  ========================================================= */
+
+  const getCustomerName = (
+    customer: any,
+  ) => {
+    return (
+      customer?.name ||
+      customer?.email ||
+      "Unknown Customer"
     );
   };
 
@@ -366,15 +304,11 @@ const AdminDashboard = () => {
                   </p>
 
                   <h2 className="mt-3 text-3xl font-bold text-gray-950">
-                    {users.totalUsers}
+                    {stats.totalUsers}
                   </h2>
 
-                  <p className="mt-2 flex items-center text-xs text-green-600">
-
-                    <ArrowUpRight className="mr-1 h-3.5 w-3.5" />
-
-                    +{users.newUsersLast7Days} last 7 days
-
+                  <p className="mt-2 flex items-center text-xs text-blue-600">
+                    Registered users
                   </p>
 
                 </div>
@@ -408,11 +342,11 @@ const AdminDashboard = () => {
                   </p>
 
                   <h2 className="mt-3 text-3xl font-bold text-gray-950">
-                    {products.totalProducts}
+                    {stats.totalProducts}
                   </h2>
 
                   <p className="mt-2 text-xs text-gray-500">
-                    {products.activeProducts} active products
+                    Active products
                   </p>
 
                 </div>
@@ -431,7 +365,7 @@ const AdminDashboard = () => {
           </Card>
 
 
-          {/* BOOKINGS */}
+          {/* ORDERS */}
 
           <Card className="group rounded-3xl border-0 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
 
@@ -446,11 +380,11 @@ const AdminDashboard = () => {
                   </p>
 
                   <h2 className="mt-3 text-3xl font-bold text-gray-950">
-                    {bookings.totalBookings}
+                    {stats.totalBookings}
                   </h2>
 
                   <p className="mt-2 text-xs text-gray-500">
-                    {bookings.bookingsLast30Days} in last 30 days
+                    All customer orders
                   </p>
 
                 </div>
@@ -485,7 +419,7 @@ const AdminDashboard = () => {
 
                   <h2 className="mt-3 text-3xl font-bold text-gray-950">
                     {formatCurrency(
-                      payments.totalRevenue,
+                      stats.totalRevenue,
                     )}
                   </h2>
 
@@ -512,13 +446,79 @@ const AdminDashboard = () => {
 
 
         {/* ===================================================
-            SECOND STATS
+            CUSTOMER + PAYMENT STATS
         =================================================== */}
 
         <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
 
 
-          {/* ACTIVE USERS */}
+          {/* UNIQUE CUSTOMERS */}
+
+          <Card className="rounded-3xl border-0 shadow-sm">
+
+            <CardContent className="p-5">
+
+              <div className="flex items-center gap-4">
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+
+                  <UserRound className="h-5 w-5 text-blue-600" />
+
+                </div>
+
+                <div>
+
+                  <p className="text-xs text-gray-500">
+                    Unique Customers
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-gray-950">
+                    {stats.uniqueCustomers}
+                  </p>
+
+                </div>
+
+              </div>
+
+            </CardContent>
+
+          </Card>
+
+
+          {/* GUEST CUSTOMERS */}
+
+          <Card className="rounded-3xl border-0 shadow-sm">
+
+            <CardContent className="p-5">
+
+              <div className="flex items-center gap-4">
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50">
+
+                  <Users className="h-5 w-5 text-orange-600" />
+
+                </div>
+
+                <div>
+
+                  <p className="text-xs text-gray-500">
+                    Guest Customers
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-gray-950">
+                    {stats.guestCustomers}
+                  </p>
+
+                </div>
+
+              </div>
+
+            </CardContent>
+
+          </Card>
+
+
+          {/* REGISTERED CUSTOMERS */}
 
           <Card className="rounded-3xl border-0 shadow-sm">
 
@@ -535,11 +535,11 @@ const AdminDashboard = () => {
                 <div>
 
                   <p className="text-xs text-gray-500">
-                    Active Users
+                    Registered Customers
                   </p>
 
                   <p className="mt-1 text-xl font-bold text-gray-950">
-                    {users.totalActiveUsers}
+                    {stats.registeredCustomers}
                   </p>
 
                 </div>
@@ -551,7 +551,7 @@ const AdminDashboard = () => {
           </Card>
 
 
-          {/* LOW STOCK */}
+          {/* PAID ORDERS */}
 
           <Card className="rounded-3xl border-0 shadow-sm">
 
@@ -559,86 +559,20 @@ const AdminDashboard = () => {
 
               <div className="flex items-center gap-4">
 
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-50">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50">
 
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-
-                </div>
-
-                <div>
-
-                  <p className="text-xs text-gray-500">
-                    Low Stock
-                  </p>
-
-                  <p className="mt-1 text-xl font-bold text-gray-950">
-                    {products.lowStockProducts}
-                  </p>
-
-                </div>
-
-              </div>
-
-            </CardContent>
-
-          </Card>
-
-
-          {/* OUT OF STOCK */}
-
-          <Card className="rounded-3xl border-0 shadow-sm">
-
-            <CardContent className="p-5">
-
-              <div className="flex items-center gap-4">
-
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50">
-
-                  <Box className="h-5 w-5 text-red-600" />
+                  <CreditCard className="h-5 w-5 text-purple-600" />
 
                 </div>
 
                 <div>
 
                   <p className="text-xs text-gray-500">
-                    Out of Stock
+                    Paid Orders
                   </p>
 
                   <p className="mt-1 text-xl font-bold text-gray-950">
-                    {products.outOfStockProducts}
-                  </p>
-
-                </div>
-
-              </div>
-
-            </CardContent>
-
-          </Card>
-
-
-          {/* CUSTOMERS */}
-
-          <Card className="rounded-3xl border-0 shadow-sm">
-
-            <CardContent className="p-5">
-
-              <div className="flex items-center gap-4">
-
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
-
-                  <Users className="h-5 w-5 text-blue-600" />
-
-                </div>
-
-                <div>
-
-                  <p className="text-xs text-gray-500">
-                    Unique Customers
-                  </p>
-
-                  <p className="mt-1 text-xl font-bold text-gray-950">
-                    {bookings.uniqueCustomers}
+                    {stats.paidOrders}
                   </p>
 
                 </div>
@@ -653,13 +587,13 @@ const AdminDashboard = () => {
 
 
         {/* ===================================================
-            CHARTS
+            ORDER + PAYMENT CHARTS
         =================================================== */}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
 
 
-          {/* BOOKING STATUS */}
+          {/* ORDER STATUS */}
 
           <Card className="rounded-3xl border-0 shadow-sm">
 
@@ -735,7 +669,7 @@ const AdminDashboard = () => {
           </Card>
 
 
-          {/* PAYMENT */}
+          {/* PAYMENT STATUS */}
 
           <Card className="rounded-3xl border-0 shadow-sm">
 
@@ -817,32 +751,43 @@ const AdminDashboard = () => {
 
 
         {/* ===================================================
-            USER + PRODUCT CHARTS
+            MONTHLY SALES
         =================================================== */}
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card className="mt-6 rounded-3xl border-0 shadow-sm">
+
+          <CardHeader>
+
+            <CardTitle className="flex items-center gap-2">
+
+              <TrendingUp className="h-5 w-5 text-green-600" />
+
+              Monthly Sales Overview
+
+            </CardTitle>
+
+            <p className="text-sm text-gray-500">
+              Orders and revenue for the recent months
+            </p>
+
+          </CardHeader>
 
 
-          {/* USER ROLES */}
+          <CardContent>
 
-          <Card className="rounded-3xl border-0 shadow-sm">
+            <div className="h-[350px]">
 
-            <CardHeader>
+              {monthlyChartData.length === 0 ? (
 
-              <CardTitle className="flex items-center gap-2">
+                <div className="flex h-full items-center justify-center">
 
-                <Users className="h-5 w-5 text-blue-600" />
+                  <p className="text-sm text-gray-500">
+                    No monthly sales data available.
+                  </p>
 
-                Users by Role
+                </div>
 
-              </CardTitle>
-
-            </CardHeader>
-
-
-            <CardContent>
-
-              <div className="h-[300px]">
+              ) : (
 
                 <ResponsiveContainer
                   width="100%"
@@ -850,7 +795,7 @@ const AdminDashboard = () => {
                 >
 
                   <BarChart
-                    data={userRoleChartData}
+                    data={monthlyChartData}
                   >
 
                     <CartesianGrid
@@ -865,16 +810,27 @@ const AdminDashboard = () => {
                     />
 
                     <YAxis
+                      yAxisId="left"
                       allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
                       axisLine={false}
                       tickLine={false}
                     />
 
                     <Tooltip />
 
+                    <Legend />
+
                     <Bar
-                      dataKey="value"
-                      name="Users"
+                      yAxisId="left"
+                      dataKey="orders"
+                      name="Orders"
                       fill="#3b82f6"
                       radius={[
                         8,
@@ -884,70 +840,11 @@ const AdminDashboard = () => {
                       ]}
                     />
 
-                  </BarChart>
-
-                </ResponsiveContainer>
-
-              </div>
-
-            </CardContent>
-
-          </Card>
-
-
-          {/* PRODUCT CATEGORY */}
-
-          <Card className="rounded-3xl border-0 shadow-sm">
-
-            <CardHeader>
-
-              <CardTitle className="flex items-center gap-2">
-
-                <Package className="h-5 w-5 text-orange-600" />
-
-                Products by Category
-
-              </CardTitle>
-
-            </CardHeader>
-
-
-            <CardContent>
-
-              <div className="h-[300px]">
-
-                <ResponsiveContainer
-                  width="100%"
-                  height="100%"
-                >
-
-                  <BarChart
-                    data={productCategoryChartData}
-                  >
-
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                    />
-
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                    />
-
-                    <YAxis
-                      allowDecimals={false}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-
-                    <Tooltip />
-
                     <Bar
-                      dataKey="value"
-                      name="Products"
-                      fill="#f97316"
+                      yAxisId="right"
+                      dataKey="revenue"
+                      name="Revenue"
+                      fill="#22c55e"
                       radius={[
                         8,
                         8,
@@ -960,13 +857,13 @@ const AdminDashboard = () => {
 
                 </ResponsiveContainer>
 
-              </div>
+              )}
 
-            </CardContent>
+            </div>
 
-          </Card>
+          </CardContent>
 
-        </div>
+        </Card>
 
 
         {/* ===================================================
@@ -998,7 +895,7 @@ const AdminDashboard = () => {
                 </p>
 
                 <p className="mt-2 text-3xl font-bold text-gray-950">
-                  {payments.paidPayments}
+                  {stats.paidOrders}
                 </p>
 
               </div>
@@ -1013,7 +910,7 @@ const AdminDashboard = () => {
                 </p>
 
                 <p className="mt-2 text-3xl font-bold text-gray-950">
-                  {payments.pendingPayments}
+                  {stats.pendingPayments}
                 </p>
 
               </div>
@@ -1028,7 +925,7 @@ const AdminDashboard = () => {
                 </p>
 
                 <p className="mt-2 text-3xl font-bold text-gray-950">
-                  {payments.failedPayments}
+                  {stats.failedPayments}
                 </p>
 
               </div>
@@ -1044,7 +941,7 @@ const AdminDashboard = () => {
 
                 <p className="mt-2 text-3xl font-bold text-gray-950">
                   {formatCurrency(
-                    payments.averagePaymentAmount,
+                    stats.averagePaymentAmount,
                   )}
                 </p>
 
@@ -1058,7 +955,7 @@ const AdminDashboard = () => {
 
 
         {/* ===================================================
-            INVENTORY SUMMARY
+            CUSTOMER LIST
         =================================================== */}
 
         <Card className="mt-6 rounded-3xl border-0 shadow-sm">
@@ -1067,96 +964,14 @@ const AdminDashboard = () => {
 
             <CardTitle className="flex items-center gap-2">
 
-              <Package className="h-5 w-5 text-orange-600" />
+              <Users className="h-5 w-5 text-blue-600" />
 
-              Inventory Summary
-
-            </CardTitle>
-
-          </CardHeader>
-
-
-          <CardContent>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
-
-              <div className="rounded-2xl bg-gray-50 p-5">
-
-                <p className="text-sm text-gray-500">
-                  Total Stock
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-gray-950">
-                  {products.totalStock}
-                </p>
-
-              </div>
-
-
-              <div className="rounded-2xl bg-green-50 p-5">
-
-                <p className="text-sm text-green-700">
-                  Active Products
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-gray-950">
-                  {products.activeProducts}
-                </p>
-
-              </div>
-
-
-              <div className="rounded-2xl bg-yellow-50 p-5">
-
-                <p className="text-sm text-yellow-700">
-                  Low Stock
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-gray-950">
-                  {products.lowStockProducts}
-                </p>
-
-              </div>
-
-
-              <div className="rounded-2xl bg-red-50 p-5">
-
-                <p className="text-sm text-red-700">
-                  Out of Stock
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-gray-950">
-                  {products.outOfStockProducts}
-                </p>
-
-              </div>
-
-            </div>
-
-          </CardContent>
-
-        </Card>
-
-
-        {/* ===================================================
-            TOP PRODUCTS
-        =================================================== */}
-
-        <Card className="mt-6 rounded-3xl border-0 shadow-sm">
-
-          <CardHeader>
-
-            <CardTitle className="flex items-center gap-2">
-
-              <Star className="h-5 w-5 text-orange-500" />
-
-              Top Products
+              Customers
 
             </CardTitle>
 
             <p className="text-sm text-gray-500">
-              Highest rated active products
+              Registered and guest customers who placed orders
             </p>
 
           </CardHeader>
@@ -1164,94 +979,182 @@ const AdminDashboard = () => {
 
           <CardContent>
 
-            {products.topProducts.length === 0 ? (
+            {stats.customers.length === 0 ? (
 
               <div className="py-10 text-center">
 
-                <Package className="mx-auto h-10 w-10 text-gray-300" />
+                <Users className="mx-auto h-10 w-10 text-gray-300" />
 
                 <p className="mt-3 text-sm text-gray-500">
-                  No products available.
+                  No customers found.
                 </p>
 
               </div>
 
             ) : (
 
-              <div className="space-y-3">
+              <div className="overflow-x-auto">
 
-                {products.topProducts.map(
-                  (product:any) => (
+                <table className="w-full min-w-[900px]">
 
-                    <div
-                      key={product._id}
-                      className="flex items-center justify-between rounded-2xl border border-gray-100 p-4"
-                    >
+                  <thead>
 
-                      <div className="flex items-center gap-4">
+                    <tr className="border-b border-gray-100 text-left">
 
-                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-gray-100">
+                      <th className="px-4 py-4 text-xs font-semibold uppercase text-gray-500">
+                        Customer
+                      </th>
 
-                          {product.images?.main ? (
+                      <th className="px-4 py-4 text-xs font-semibold uppercase text-gray-500">
+                        Contact
+                      </th>
 
-                            <img
-                              src={product.images.main}
-                              alt={product.name}
-                              className="h-full w-full object-cover"
-                            />
+                      <th className="px-4 py-4 text-xs font-semibold uppercase text-gray-500">
+                        Type
+                      </th>
 
-                          ) : (
+                      <th className="px-4 py-4 text-xs font-semibold uppercase text-gray-500">
+                        Orders
+                      </th>
 
-                            <Package className="h-5 w-5 text-gray-400" />
+                      <th className="px-4 py-4 text-xs font-semibold uppercase text-gray-500">
+                        Paid
+                      </th>
 
-                          )}
+                      <th className="px-4 py-4 text-xs font-semibold uppercase text-gray-500">
+                        Spent
+                      </th>
 
-                        </div>
+                      <th className="px-4 py-4 text-xs font-semibold uppercase text-gray-500">
+                        Last Order
+                      </th>
+
+                    </tr>
+
+                  </thead>
 
 
-                        <div>
+                  <tbody>
 
-                          <h3 className="font-semibold text-gray-950">
-                            {product.name}
-                          </h3>
+                    {stats.customers.map(
+                      (customer) => (
 
-                          <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
+                        <tr
+                          key={customer.email}
+                          className="border-b border-gray-50 transition hover:bg-gray-50"
+                        >
 
-                            <span className="flex items-center gap-1">
+                          {/* CUSTOMER */}
 
-                              <Star className="h-3.5 w-3.5 fill-current text-yellow-500" />
+                          <td className="px-4 py-4">
 
-                              {product.rating ?? 0}
+                            <div>
 
+                              <p className="font-semibold text-gray-950">
+                                {getCustomerName(customer)}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-500">
+                                {customer.email}
+                              </p>
+
+                            </div>
+
+                          </td>
+
+
+                          {/* CONTACT */}
+
+                          <td className="px-4 py-4">
+
+                            <p className="text-sm text-gray-700">
+                              {customer.phone || "N/A"}
+                            </p>
+
+                            <p className="mt-1 max-w-[220px] truncate text-xs text-gray-500">
+                              {customer.address || "N/A"}
+                            </p>
+
+                          </td>
+
+
+                          {/* TYPE */}
+
+                          <td className="px-4 py-4">
+
+                            {customer.customerType ===
+                            "GUEST" ? (
+
+                              <span className="inline-flex items-center rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                                Guest
+                              </span>
+
+                            ) : (
+
+                              <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                                Registered
+                              </span>
+
+                            )}
+
+                          </td>
+
+
+                          {/* ORDERS */}
+
+                          <td className="px-4 py-4">
+
+                            <span className="font-semibold text-gray-950">
+                              {customer.totalOrders}
                             </span>
 
-                            <span>
-                              {product.reviews ?? 0} reviews
+                          </td>
+
+
+                          {/* PAID */}
+
+                          <td className="px-4 py-4">
+
+                            <span className="font-semibold text-green-600">
+                              {customer.paidOrders}
                             </span>
 
-                            <span>
-                              Stock: {product.stock}
+                          </td>
+
+
+                          {/* SPENT */}
+
+                          <td className="px-4 py-4">
+
+                            <span className="font-semibold text-gray-950">
+                              {formatCurrency(
+                                customer.totalSpent,
+                              )}
                             </span>
 
-                          </div>
-
-                        </div>
-
-                      </div>
+                          </td>
 
 
-                      <p className="font-bold text-gray-950">
+                          {/* LAST ORDER */}
 
-                        {formatCurrency(
-                          product.price,
-                        )}
+                          <td className="px-4 py-4">
 
-                      </p>
+                            <span className="text-sm text-gray-500">
+                              {formatDate(
+                                customer.lastOrderAt,
+                              )}
+                            </span>
 
-                    </div>
+                          </td>
 
-                  ),
-                )}
+                        </tr>
+
+                      ),
+                    )}
+
+                  </tbody>
+
+                </table>
 
               </div>
 
@@ -1287,7 +1190,7 @@ const AdminDashboard = () => {
 
           <CardContent>
 
-            {bookings.recentBookings.length === 0 ? (
+            {stats.recentBookings.length === 0 ? (
 
               <div className="py-10 text-center">
 
@@ -1303,13 +1206,15 @@ const AdminDashboard = () => {
 
               <div className="space-y-3">
 
-                {bookings.recentBookings.map(
-                  (booking:any) => (
+                {stats.recentBookings.map(
+                  (booking) => (
 
                     <div
                       key={booking._id}
                       className="flex flex-col gap-4 rounded-2xl border border-gray-100 p-4 transition hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
                     >
+
+                      {/* LEFT */}
 
                       <div className="flex items-center gap-4">
 
@@ -1331,11 +1236,29 @@ const AdminDashboard = () => {
 
                           </p>
 
+
+                          <p className="mt-1 text-sm text-gray-700">
+
+                            {booking.customer?.name ||
+                              booking.customer?.email ||
+                              booking.user?.name ||
+                              "Customer"}
+
+                          </p>
+
+
                           <p className="mt-1 text-xs text-gray-500">
 
-                            {typeof booking.user === "object"
-                              ? booking.user.name
-                              : "Customer"}
+                            {booking.customer?.email ||
+                              booking.user?.email ||
+                              "No email"}
+
+                            {" • "}
+
+                            {booking.customerType ===
+                            "GUEST"
+                              ? "Guest"
+                              : "Registered"}
 
                             {" • "}
 
@@ -1350,19 +1273,28 @@ const AdminDashboard = () => {
                       </div>
 
 
-                      <div className="flex items-center gap-4">
+                      {/* RIGHT */}
+
+                      <div className="flex items-center gap-5">
 
                         <div className="text-right">
 
                           <p className="font-bold text-gray-950">
+
                             {formatCurrency(
                               booking.totalAmount,
                             )}
+
                           </p>
 
-                          <p className="mt-1 text-xs text-gray-500">
-                            {booking.bookingStatus}
-                          </p>
+
+                          <div className="mt-1 flex items-center justify-end gap-2">
+
+                            <span className="text-xs text-gray-500">
+                              {booking.bookingStatus}
+                            </span>
+
+                          </div>
 
                         </div>
 
