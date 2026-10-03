@@ -5,6 +5,7 @@ import {
   FaTwitter,
   FaPaw,
 } from "react-icons/fa";
+
 import {
   FiClock,
   FiHeadphones,
@@ -16,6 +17,7 @@ import {
   FiShield,
   FiShoppingBag,
 } from "react-icons/fi";
+
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
@@ -24,30 +26,55 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useGetContactQuery } from "@/redux/features/contact/contactApi";
+
 
 const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  /* =========================================================
+     GET CONTACT INFORMATION FROM BACKEND
+  ========================================================= */
+
+  const {
+    data: contactResponse,
+    isLoading: isContactLoading,
+    isError: isContactError,
+  } = useGetContactQuery();
+
+  const contact = contactResponse?.data;
+
+  /* =========================================================
+     CONTACT INFO
+  ========================================================= */
 
   const contactInfo = [
     {
       icon: FiPhone,
       title: "Call Us",
-      value: "+1 (415) 555-0138",
-      description: "Mon – Fri, 9:00 AM – 6:00 PM PST",
+      value: contact?.phone || "Phone unavailable",
+      description: contact?.businessHours?.mondayFriday
+        ? `Mon – Fri, ${contact.businessHours.mondayFriday}`
+        : "Business hours unavailable",
     },
     {
       icon: FiMail,
       title: "Email Us",
-      value: "hello@atnamira.com",
+      value: contact?.email || "Email unavailable",
       description: "We usually reply within 24 hours.",
     },
     {
       icon: FiMessageCircle,
       title: "Customer Support",
       value: "We're here to help",
-      description: "Questions about orders, sizing or products?",
+      description:
+        "Questions about orders, sizing or products?",
     },
   ];
+
+  /* =========================================================
+     SUPPORT ITEMS
+  ========================================================= */
 
   const supportItems = [
     {
@@ -70,12 +97,20 @@ const Contact = () => {
     },
   ];
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  /* =========================================================
+     FORM SUBMIT
+  ========================================================= */
+
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
     setIsSubmitting(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, 1000),
+    );
 
     setIsSubmitting(false);
 
@@ -87,9 +122,63 @@ const Contact = () => {
     event.currentTarget.reset();
   };
 
+  /* =========================================================
+     LOADING
+  ========================================================= */
+
+  if (isContactLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+            <FaPaw className="h-7 w-7 animate-pulse text-primary" />
+          </div>
+
+          <h2 className="mt-4 text-xl font-bold">
+            Loading Contact Information...
+          </h2>
+
+          <p className="mt-2 text-sm text-muted-foreground">
+            Please wait a moment.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  /* =========================================================
+     ERROR
+  ========================================================= */
+
+  if (isContactError || !contact) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md border-border/60">
+          <CardContent className="p-8 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+              <FiMapPin className="h-6 w-6 text-destructive" />
+            </div>
+
+            <h2 className="mt-5 text-xl font-black">
+              Contact Information Unavailable
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              We couldn't load our contact information right
+              now. Please try again later.
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-background">
-      {/* ================= HERO ================= */}
+      {/* =====================================================
+          HERO
+      ===================================================== */}
+
       <section className="relative overflow-hidden border-b bg-gradient-to-br from-background via-muted/20 to-primary/5">
         <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
 
@@ -98,22 +187,29 @@ const Contact = () => {
         <div className="container relative mx-auto px-4 py-20 text-center md:py-28">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border bg-background/80 px-4 py-2 text-sm font-medium shadow-sm backdrop-blur">
             <FaPaw className="h-4 w-4 text-primary" />
+
             AtNamira Customer Care
           </div>
 
           <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl md:text-6xl">
             We'd Love To Hear
-            <span className="block text-primary">From You.</span>
+            <span className="block text-primary">
+              From You.
+            </span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-            Have a question about your order, product, sizing, shipping, or
-            anything else? Our friendly team is ready to help.
+            Have a question about your order, product, sizing,
+            shipping, or anything else? Our friendly team is
+            ready to help.
           </p>
         </div>
       </section>
 
-      {/* ================= CONTACT INFO ================= */}
+      {/* =====================================================
+          CONTACT INFO
+      ===================================================== */}
+
       <section className="container mx-auto px-4 py-12 md:py-16">
         <div className="grid gap-5 md:grid-cols-3">
           {contactInfo.map((item) => {
@@ -129,12 +225,14 @@ const Contact = () => {
                     <Icon className="h-5 w-5" />
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-muted-foreground">
                       {item.title}
                     </p>
 
-                    <h3 className="mt-1 font-bold">{item.value}</h3>
+                    <h3 className="mt-1 break-words font-bold">
+                      {item.value}
+                    </h3>
 
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       {item.description}
@@ -147,10 +245,16 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* ================= CONTACT + MAP ================= */}
+      {/* =====================================================
+          CONTACT + MAP
+      ===================================================== */}
+
       <section className="container mx-auto px-4 pb-20 md:pb-28">
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-          {/* Contact Form */}
+          {/* =================================================
+              CONTACT FORM
+          ================================================= */}
+
           <Card className="overflow-hidden border-border/60 shadow-xl">
             <div className="border-b bg-muted/30 px-6 py-6 md:px-8">
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">
@@ -162,16 +266,23 @@ const Contact = () => {
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Fill out the form and our support team will get back to you.
+                Fill out the form and our support team will get
+                back to you.
               </p>
             </div>
 
             <CardContent className="p-6 md:p-8">
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-5"
+              >
                 {/* Name + Email */}
+
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Your Name</Label>
+                    <Label htmlFor="name">
+                      Your Name
+                    </Label>
 
                     <Input
                       id="name"
@@ -183,7 +294,9 @@ const Contact = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
+                    <Label htmlFor="email">
+                      Email Address
+                    </Label>
 
                     <Input
                       id="email"
@@ -197,9 +310,12 @@ const Contact = () => {
                 </div>
 
                 {/* Phone + Subject */}
+
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="phone">
+                      Phone Number
+                    </Label>
 
                     <Input
                       id="phone"
@@ -211,7 +327,9 @@ const Contact = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
+                    <Label htmlFor="subject">
+                      Subject
+                    </Label>
 
                     <Input
                       id="subject"
@@ -224,8 +342,11 @@ const Contact = () => {
                 </div>
 
                 {/* Message */}
+
                 <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
+                  <Label htmlFor="message">
+                    Message
+                  </Label>
 
                   <Textarea
                     id="message"
@@ -237,6 +358,7 @@ const Contact = () => {
                 </div>
 
                 {/* Submit */}
+
                 <Button
                   type="submit"
                   size="lg"
@@ -254,49 +376,58 @@ const Contact = () => {
                 </Button>
 
                 <p className="text-center text-xs leading-5 text-muted-foreground">
-                  Your information is safe with us. We only use your details
-                  to respond to your request.
+                  Your information is safe with us. We only use
+                  your details to respond to your request.
                 </p>
               </form>
             </CardContent>
           </Card>
 
-          {/* Location + Map */}
+          {/* =================================================
+              LOCATION + MAP
+          ================================================= */}
+
           <div className="space-y-6">
             <Card className="overflow-hidden border-border/60 shadow-xl">
               <CardContent className="p-0">
                 {/* Address */}
+
                 <div className="border-b bg-muted/30 p-6">
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                       <FiMapPin className="h-5 w-5" />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-muted-foreground">
                         Visit AtNamira
                       </p>
 
                       <h2 className="mt-1 text-xl font-black">
-                        Our US Office
+                        {contact.locationName}
                       </h2>
 
                       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        1 Market Street
+                        {contact.address}
                         <br />
-                        San Francisco, CA 94105
+
+                        {contact.city},{" "}
+                        {contact.state}{" "}
+                        {contact.postalCode}
                         <br />
-                        United States
+
+                        {contact.country}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Google Map */}
+
                 <div className="h-[360px] w-full bg-muted">
                   <iframe
-                    title="AtNamira US Office Location"
-                    src="https://www.google.com/maps?q=1+Market+Street,+San+Francisco,+CA+94105&output=embed"
+                    title={`${contact.locationName} Location`}
+                    src={contact.mapUrl}
                     className="h-full w-full border-0"
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
@@ -305,7 +436,10 @@ const Contact = () => {
               </CardContent>
             </Card>
 
-            {/* Business Hours */}
+            {/* =================================================
+                BUSINESS HOURS
+            ================================================= */}
+
             <Card className="border-border/60">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
@@ -314,39 +448,55 @@ const Contact = () => {
                   </div>
 
                   <div>
-                    <h3 className="font-bold">Business Hours</h3>
+                    <h3 className="font-bold">
+                      Business Hours
+                    </h3>
 
                     <p className="text-xs text-muted-foreground">
-                      Pacific Standard Time
+                      {contact.businessHours?.timezone ||
+                        "Local Time"}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-5 space-y-3 text-sm">
-                  <div className="flex items-center justify-between border-b pb-3">
+                  {/* Monday - Friday */}
+
+                  <div className="flex items-center justify-between gap-4 border-b pb-3">
                     <span className="text-muted-foreground">
                       Monday – Friday
                     </span>
 
-                    <span className="font-semibold">
-                      9:00 AM – 6:00 PM
+                    <span className="text-right font-semibold">
+                      {contact.businessHours
+                        ?.mondayFriday || "Closed"}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between border-b pb-3">
+                  {/* Saturday */}
+
+                  <div className="flex items-center justify-between gap-4 border-b pb-3">
                     <span className="text-muted-foreground">
                       Saturday
                     </span>
 
-                    <span className="font-semibold">
-                      10:00 AM – 4:00 PM
+                    <span className="text-right font-semibold">
+                      {contact.businessHours?.saturday ||
+                        "Closed"}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Sunday</span>
+                  {/* Sunday */}
 
-                    <span className="font-semibold">Closed</span>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">
+                      Sunday
+                    </span>
+
+                    <span className="text-right font-semibold">
+                      {contact.businessHours?.sunday ||
+                        "Closed"}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -355,7 +505,10 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* ================= SUPPORT ================= */}
+      {/* =====================================================
+          SUPPORT
+      ===================================================== */}
+
       <section className="border-y bg-muted/30">
         <div className="container mx-auto px-4 py-20">
           <div className="mx-auto max-w-2xl text-center">
@@ -368,8 +521,8 @@ const Contact = () => {
             </h2>
 
             <p className="mt-4 leading-7 text-muted-foreground">
-              From choosing the right size to tracking your delivery, we're
-              always happy to help.
+              From choosing the right size to tracking your
+              delivery, we're always happy to help.
             </p>
           </div>
 
@@ -402,7 +555,10 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* ================= SOCIAL ================= */}
+      {/* =====================================================
+          SOCIAL
+      ===================================================== */}
+
       <section className="container mx-auto px-4 py-20">
         <div className="rounded-[2rem] border bg-card p-8 text-center shadow-sm md:p-12">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -414,8 +570,8 @@ const Contact = () => {
           </h2>
 
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Discover new collections, pet style inspiration, and adorable
-            moments from the AtNamira community.
+            Discover new collections, pet style inspiration,
+            and adorable moments from the AtNamira community.
           </p>
 
           <div className="mt-7 flex justify-center gap-3">

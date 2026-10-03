@@ -1,5 +1,6 @@
 import AddProduct from "@/components/modules/admin/AddProduct";
 import AdminDashboard from "@/components/modules/admin/AdminDashboard";
+import ContactSettings from "@/components/modules/admin/ContactSettings";
 import OrdersStats from "@/components/modules/admin/OrdersStats";
 import ProductAll from "@/components/modules/admin/ProductAll";
 import SeoAudit from "@/components/modules/admin/SeoAudit";
@@ -89,6 +90,17 @@ export const adminSidebarItems:ISidebarItem[] = [
         title: "Tracking Settings",
         url: "/admin/tracking",
         component: TrackingSettings,
+      },
+    ],
+  },
+
+   {
+    title: "Contact Settings",
+    items: [
+      {
+        title: "Contact Settings",
+        url: "/admin/contact",
+        component: ContactSettings,
       },
     ],
   },
