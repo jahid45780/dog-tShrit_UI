@@ -12,9 +12,13 @@ import {
   XCircle,
 } from "lucide-react";
 
-import { Link, useParams } from "react-router-dom";
+import {
+  Link,
+  useParams,
+} from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardContent,
@@ -24,22 +28,35 @@ import {
   useGetBookingByIdQuery,
 } from "@/redux/features/booking/booking.api";
 
+// =========================================================
+// ORDER DETAILS
+// =========================================================
+
 const MyOrderDetails = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } =
+    useParams<{ id: string }>();
+
+  // =======================================================
+  // BOOKING
+  // =======================================================
 
   const {
     data,
     isLoading,
     isError,
-  } = useGetBookingByIdQuery(id as string, {
-    skip: !id,
-  });
+    refetch,
+  } = useGetBookingByIdQuery(
+    id as string,
+    {
+      skip: !id,
+    }
+  );
 
   const booking = data?.data;
 
-  // ========================================
+  // =======================================================
   // LOADING
-  // ========================================
+  // =======================================================
 
   if (isLoading) {
     return (
@@ -53,7 +70,9 @@ const MyOrderDetails = () => {
             <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
               <div className="space-y-5">
                 <div className="h-44 rounded-2xl bg-gray-200" />
+
                 <div className="h-80 rounded-2xl bg-gray-200" />
+
                 <div className="h-56 rounded-2xl bg-gray-200" />
               </div>
 
@@ -65,9 +84,9 @@ const MyOrderDetails = () => {
     );
   }
 
-  // ========================================
-  // ERROR
-  // ========================================
+  // =======================================================
+  // ERROR / NOT FOUND
+  // =======================================================
 
   if (isError || !booking) {
     return (
@@ -85,35 +104,69 @@ const MyOrderDetails = () => {
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-gray-500">
-              We couldn't find this order. Please
-              check the order ID and try again.
+              We couldn't find this order. It may have been
+              removed or you may not have permission to view it.
             </p>
 
-            <Link to="/my-bookings">
-              <Button className="mt-6 rounded-xl bg-gray-950 hover:bg-orange-600">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to My Orders
+            <div className="mt-6 flex justify-center gap-3">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => refetch()}
+              >
+                Try Again
               </Button>
-            </Link>
+
+              <Link to="/my-bookings">
+                <Button className="rounded-xl bg-gray-950 hover:bg-orange-600">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  My Orders
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  const items = booking.items ?? [];
+  // =======================================================
+  // ITEMS
+  // =======================================================
 
-  const totalQuantity = items.reduce(
-    (total, item) =>
-      total + Number(item.quantity || 0),
-    0
-  );
+  const items = Array.isArray(
+    booking.items
+  )
+    ? booking.items
+    : [];
 
-  const subtotal = items.reduce(
-    (total, item) =>
-      total + Number(item.subtotal || 0),
-    0
-  );
+  // =======================================================
+  // QUANTITY
+  // =======================================================
+
+  const totalQuantity =
+    items.reduce(
+      (total: number, item: any) =>
+        total +
+        Number(item?.quantity || 0),
+      0
+    );
+
+  // =======================================================
+  // SUBTOTAL
+  // =======================================================
+
+  const subtotal =
+    items.reduce(
+      (total: number, item: any) =>
+        total +
+        Number(item?.subtotal || 0),
+      0
+    );
+
+  // =======================================================
+  // STATUS
+  // =======================================================
 
   const isPaid =
     booking.paymentStatus === "PAID";
@@ -127,17 +180,17 @@ const MyOrderDetails = () => {
   const isCancelled =
     booking.bookingStatus === "CANCELLED";
 
+  // =======================================================
+  // PAGE
+  // =======================================================
+
   return (
     <div className="min-h-screen bg-[#fafaf9]">
-      {/* ========================================
-          HEADER
-      ======================================== */}
-
       <OrderHeader />
 
-      {/* ========================================
+      {/* ===================================================
           BREADCRUMB
-      ======================================== */}
+      =================================================== */}
 
       <div className="border-b bg-white">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
@@ -171,12 +224,12 @@ const MyOrderDetails = () => {
         </div>
       </div>
 
-      {/* ========================================
+      {/* ===================================================
           MAIN
-      ======================================== */}
+      =================================================== */}
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        {/* BACK BUTTON */}
+        {/* BACK */}
 
         <Link
           to="/my-bookings"
@@ -186,12 +239,12 @@ const MyOrderDetails = () => {
           Back to My Orders
         </Link>
 
-        {/* ========================================
-            PAGE TITLE
-        ======================================== */}
+        {/* =================================================
+            TITLE
+        ================================================= */}
 
         <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
+          <div className="min-w-0">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-600">
               <ShoppingBag className="h-3.5 w-3.5" />
               Atnamira Pet Shop
@@ -210,11 +263,14 @@ const MyOrderDetails = () => {
                 Placed on{" "}
                 {new Date(
                   booking.createdAt
-                ).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                ).toLocaleDateString(
+                  "en-US",
+                  {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  }
+                )}
               </p>
             )}
           </div>
@@ -230,19 +286,19 @@ const MyOrderDetails = () => {
           </div>
         </div>
 
-        {/* ========================================
-            CONTENT GRID
-        ======================================== */}
+        {/* =================================================
+            GRID
+        ================================================= */}
 
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
-          {/* ======================================
-              LEFT SIDE
-          ====================================== */}
+          {/* =================================================
+              LEFT
+          ================================================= */}
 
           <div className="space-y-6">
-            {/* ====================================
+            {/* =================================================
                 ORDER INFORMATION
-            ==================================== */}
+            ================================================= */}
 
             <Card className="rounded-2xl border border-gray-100 bg-white shadow-sm">
               <CardContent className="p-6">
@@ -265,12 +321,18 @@ const MyOrderDetails = () => {
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   <InfoBox
                     label="Payment Status"
-                    value={booking.paymentStatus}
+                    value={
+                      booking.paymentStatus ||
+                      "PENDING"
+                    }
                   />
 
                   <InfoBox
                     label="Order Status"
-                    value={booking.bookingStatus}
+                    value={
+                      booking.bookingStatus ||
+                      "PENDING"
+                    }
                   />
 
                   <InfoBox
@@ -284,19 +346,21 @@ const MyOrderDetails = () => {
 
                   <InfoBox
                     label="Total Quantity"
-                    value={String(totalQuantity)}
+                    value={String(
+                      totalQuantity
+                    )}
                   />
                 </div>
               </CardContent>
             </Card>
 
-            {/* ====================================
+            {/* =================================================
                 ORDER ITEMS
-            ==================================== */}
+            ================================================= */}
 
             <Card className="rounded-2xl border border-gray-100 bg-white shadow-sm">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-black text-gray-950">
                       Order Items
@@ -307,7 +371,7 @@ const MyOrderDetails = () => {
                     </p>
                   </div>
 
-                  <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-600">
+                  <span className="shrink-0 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-600">
                     {items.length}{" "}
                     {items.length === 1
                       ? "item"
@@ -315,80 +379,115 @@ const MyOrderDetails = () => {
                   </span>
                 </div>
 
-                <div className="mt-6 divide-y">
-                  {items.map((item, index) => (
-                    <div
-                      key={`${item.product}-${index}`}
-                      className="flex gap-4 py-5 first:pt-0 last:pb-0"
-                    >
-                      {/* PRODUCT ICON */}
+                {items.length === 0 ? (
+                  <div className="mt-6 rounded-xl bg-gray-50 p-6 text-center">
+                    <Package className="mx-auto h-8 w-8 text-gray-400" />
 
-                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-orange-50">
-                        <Package className="h-8 w-8 text-orange-500" />
-                      </div>
+                    <p className="mt-2 text-sm text-gray-500">
+                      No product information available.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-6 divide-y">
+                    {items.map(
+                      (
+                        item: any,
+                        index: number
+                      ) => {
+                        const quantity =
+                          Number(
+                            item?.quantity || 0
+                          );
 
-                      {/* PRODUCT INFO */}
+                        const price =
+                          Number(
+                            item?.price || 0
+                          );
 
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-gray-950">
-                          {item.name}
-                        </h3>
+                        const itemSubtotal =
+                          Number(
+                            item?.subtotal ||
+                              price *
+                                quantity
+                          );
 
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <span className="rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-600">
-                            Qty:{" "}
-                            <strong className="text-gray-900">
-                              {item.quantity}
-                            </strong>
-                          </span>
+                        return (
+                          <div
+                            key={`${item?.product || "item"}-${index}`}
+                            className="flex gap-4 py-5 first:pt-0 last:pb-0"
+                          >
+                            {/* ICON */}
 
-                          {item.color && (
-                            <span className="rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-600">
-                              Color:{" "}
-                              <strong className="text-gray-900">
-                                {item.color}
-                              </strong>
-                            </span>
-                          )}
+                            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-orange-50">
+                              <Package className="h-8 w-8 text-orange-500" />
+                            </div>
 
-                          {item.size && (
-                            <span className="rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-600">
-                              Size:{" "}
-                              <strong className="text-gray-900">
-                                {item.size}
-                              </strong>
-                            </span>
-                          )}
-                        </div>
+                            {/* INFO */}
 
-                        <p className="mt-3 text-xs text-gray-400">
-                          $
-                          {Number(
-                            item.price
-                          ).toFixed(2)}{" "}
-                          each
-                        </p>
-                      </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-bold text-gray-950">
+                                {item?.name ||
+                                  "Product"}
+                              </h3>
 
-                      {/* ITEM TOTAL */}
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <span className="rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-600">
+                                  Qty:{" "}
+                                  <strong className="text-gray-900">
+                                    {quantity}
+                                  </strong>
+                                </span>
 
-                      <div className="shrink-0 text-right">
-                        <p className="text-base font-black text-gray-950">
-                          $
-                          {Number(
-                            item.subtotal
-                          ).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                                {item?.color && (
+                                  <span className="rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-600">
+                                    Color:{" "}
+                                    <strong className="text-gray-900">
+                                      {item.color}
+                                    </strong>
+                                  </span>
+                                )}
+
+                                {item?.size && (
+                                  <span className="rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-600">
+                                    Size:{" "}
+                                    <strong className="text-gray-900">
+                                      {item.size}
+                                    </strong>
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="mt-3 text-xs text-gray-400">
+                                $
+                                {price.toFixed(
+                                  2
+                                )}{" "}
+                                each
+                              </p>
+                            </div>
+
+                            {/* TOTAL */}
+
+                            <div className="shrink-0 text-right">
+                              <p className="text-base font-black text-gray-950">
+                                $
+                                {itemSubtotal.toFixed(
+                                  2
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* ====================================
-                SHIPPING ADDRESS
-            ==================================== */}
+            {/* =================================================
+                SHIPPING
+            ================================================= */}
 
             <Card className="rounded-2xl border border-gray-100 bg-white shadow-sm">
               <CardContent className="p-6">
@@ -410,16 +509,16 @@ const MyOrderDetails = () => {
 
                 <div className="mt-6 rounded-xl bg-gray-50 p-5">
                   <p className="font-bold text-gray-950">
-                    {booking.shippingAddress?.name ||
-                      "N/A"}
+                    {booking.shippingAddress
+                      ?.name || "N/A"}
                   </p>
 
                   <div className="mt-3 flex items-start gap-2 text-sm text-gray-600">
                     <Phone className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
 
                     <span>
-                      {booking.shippingAddress?.phone ||
-                        "N/A"}
+                      {booking.shippingAddress
+                        ?.phone || "N/A"}
                     </span>
                   </div>
 
@@ -427,8 +526,8 @@ const MyOrderDetails = () => {
                     <MapPin className="mt-1 h-4 w-4 shrink-0 text-orange-500" />
 
                     <span>
-                      {booking.shippingAddress?.address ||
-                        "N/A"}
+                      {booking.shippingAddress
+                        ?.address || "N/A"}
                     </span>
                   </div>
                 </div>
@@ -436,14 +535,14 @@ const MyOrderDetails = () => {
             </Card>
           </div>
 
-          {/* ======================================
-              RIGHT SIDE
-          ====================================== */}
+          {/* =================================================
+              RIGHT
+          ================================================= */}
 
           <aside className="space-y-6 lg:sticky lg:top-24">
-            {/* ====================================
-                ORDER SUMMARY
-            ==================================== */}
+            {/* =================================================
+                SUMMARY
+            ================================================= */}
 
             <Card className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
               <CardContent className="p-6">
@@ -487,8 +586,8 @@ const MyOrderDetails = () => {
                       Shipping
                     </span>
 
-                    <span className="font-bold text-gray-900">
-                      Included
+                    <span className="font-bold text-green-600">
+                      Free
                     </span>
                   </div>
 
@@ -507,7 +606,8 @@ const MyOrderDetails = () => {
                       <p className="text-2xl font-black text-orange-600">
                         $
                         {Number(
-                          booking.totalAmount
+                          booking.totalAmount ||
+                            0
                         ).toFixed(2)}
                       </p>
                     </div>
@@ -516,9 +616,9 @@ const MyOrderDetails = () => {
               </CardContent>
             </Card>
 
-            {/* ====================================
+            {/* =================================================
                 PAYMENT
-            ==================================== */}
+            ================================================= */}
 
             <Card className="rounded-2xl border border-gray-100 bg-white shadow-sm">
               <CardContent className="p-6">
@@ -569,12 +669,13 @@ const MyOrderDetails = () => {
                     </div>
                   )}
 
-                  {!isPaid && !isFailed && (
-                    <div className="flex items-center gap-2 rounded-xl bg-yellow-50 p-4 text-sm font-semibold text-yellow-700">
-                      <Clock3 className="h-5 w-5" />
-                      Payment is pending
-                    </div>
-                  )}
+                  {!isPaid &&
+                    !isFailed && (
+                      <div className="flex items-center gap-2 rounded-xl bg-yellow-50 p-4 text-sm font-semibold text-yellow-700">
+                        <Clock3 className="h-5 w-5" />
+                        Payment is pending
+                      </div>
+                    )}
                 </div>
 
                 {booking.stripePaymentIntentId && (
@@ -584,16 +685,18 @@ const MyOrderDetails = () => {
                     </p>
 
                     <p className="mt-1 break-all text-xs text-gray-500">
-                      {booking.stripePaymentIntentId}
+                      {
+                        booking.stripePaymentIntentId
+                      }
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* ====================================
+            {/* =================================================
                 ORDER STATUS
-            ==================================== */}
+            ================================================= */}
 
             <Card className="rounded-2xl border border-gray-100 bg-white shadow-sm">
               <CardContent className="p-6">
@@ -659,8 +762,8 @@ const MyOrderDetails = () => {
                         </div>
 
                         <p className="mt-2 text-xs leading-5 text-yellow-600">
-                          Your order is waiting for
-                          payment confirmation.
+                          Your order is waiting for payment
+                          confirmation.
                         </p>
                       </div>
                     )}
@@ -668,7 +771,9 @@ const MyOrderDetails = () => {
               </CardContent>
             </Card>
 
-            {/* CONTINUE SHOPPING */}
+            {/* =================================================
+                CONTINUE SHOPPING
+            ================================================= */}
 
             <Link
               to="/collections"
@@ -689,9 +794,9 @@ const MyOrderDetails = () => {
   );
 };
 
-// ========================================
+// =========================================================
 // INFO BOX
-// ========================================
+// =========================================================
 
 const InfoBox = ({
   label,
@@ -706,21 +811,21 @@ const InfoBox = ({
         {label}
       </p>
 
-      <p className="mt-1.5 text-sm font-bold text-gray-900">
+      <p className="mt-1.5 break-words text-sm font-bold text-gray-900">
         {value}
       </p>
     </div>
   );
 };
 
-// ========================================
+// =========================================================
 // PAYMENT STATUS
-// ========================================
+// =========================================================
 
 const PaymentStatus = ({
   status,
 }: {
-  status: string;
+  status?: string;
 }) => {
   if (status === "PAID") {
     return (
@@ -748,14 +853,14 @@ const PaymentStatus = ({
   );
 };
 
-// ========================================
+// =========================================================
 // BOOKING STATUS
-// ========================================
+// =========================================================
 
 const BookingStatus = ({
   status,
 }: {
-  status: string;
+  status?: string;
 }) => {
   if (status === "CONFIRMED") {
     return (
@@ -783,9 +888,9 @@ const BookingStatus = ({
   );
 };
 
-// ========================================
+// =========================================================
 // HEADER
-// ========================================
+// =========================================================
 
 const OrderHeader = () => {
   return (
@@ -830,7 +935,7 @@ const OrderHeader = () => {
           </Link>
 
           <Link
-            to="/my-cart"
+            to="/user/my-card"
             className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 text-gray-700 transition hover:bg-orange-50 hover:text-orange-600"
           >
             <ShoppingBag className="h-5 w-5" />

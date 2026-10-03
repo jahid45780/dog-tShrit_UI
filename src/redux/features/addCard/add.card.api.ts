@@ -1,15 +1,19 @@
 import { baseApi } from "@/redux/baseApi";
-import type { IAddToCartPayload, ICartResponse, IUpdateCartPayload } from "@/types";
 
-
+import type {
+  IAddToCartPayload,
+  ICartResponse,
+  IUpdateCartPayload,
+} from "@/types";
 
 export const CartApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    // =========================
+    // ========================================
     // ADD TO CART
-    // =========================
+    // Guest + Logged In
+    // ========================================
     addToCart: build.mutation<
-      any,
+      ICartResponse,
       IAddToCartPayload
     >({
       query: (cartInfo) => ({
@@ -21,9 +25,10 @@ export const CartApi = baseApi.injectEndpoints({
       invalidatesTags: ["CART"],
     }),
 
-    // =========================
-    // GET MY CART
-    // =========================
+    // ========================================
+    // GET CART
+    // Guest + Logged In
+    // ========================================
     getMyCart: build.query<
       ICartResponse,
       void
@@ -36,14 +41,17 @@ export const CartApi = baseApi.injectEndpoints({
       providesTags: ["CART"],
     }),
 
-    // =========================
-    // UPDATE QUANTITY
-    // =========================
+    // ========================================
+    // UPDATE CART ITEM
+    // ========================================
     updateCartItem: build.mutation<
-      any,
+      ICartResponse,
       IUpdateCartPayload
     >({
-      query: ({ itemId, quantity }) => ({
+      query: ({
+        itemId,
+        quantity,
+      }) => ({
         url: `/card/update-item/${itemId}`,
         method: "PATCH",
         data: {
@@ -54,11 +62,11 @@ export const CartApi = baseApi.injectEndpoints({
       invalidatesTags: ["CART"],
     }),
 
-    // =========================
-    // REMOVE ITEM
-    // =========================
+    // ========================================
+    // REMOVE CART ITEM
+    // ========================================
     removeCartItem: build.mutation<
-      any,
+      ICartResponse,
       string
     >({
       query: (itemId) => ({
@@ -69,11 +77,11 @@ export const CartApi = baseApi.injectEndpoints({
       invalidatesTags: ["CART"],
     }),
 
-    // =========================
+    // ========================================
     // CLEAR CART
-    // =========================
+    // ========================================
     clearCart: build.mutation<
-      any,
+      ICartResponse,
       void
     >({
       query: () => ({
@@ -82,6 +90,21 @@ export const CartApi = baseApi.injectEndpoints({
       }),
 
       invalidatesTags: ["CART"],
+    }),
+
+    // ========================================
+    // MERGE GUEST CART AFTER LOGIN
+    // ========================================
+    mergeGuestCart: build.mutation<
+      ICartResponse,
+      void
+    >({
+      query: () => ({
+        url: "/card/merge-guest-cart",
+        method: "POST",
+      }),
+
+      invalidatesTags: ["CART", "USER"],
     }),
   }),
 });
@@ -92,4 +115,5 @@ export const {
   useUpdateCartItemMutation,
   useRemoveCartItemMutation,
   useClearCartMutation,
+  useMergeGuestCartMutation,
 } = CartApi;

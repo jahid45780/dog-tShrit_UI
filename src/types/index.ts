@@ -171,13 +171,9 @@ export interface IBooking {
   updatedAt?: string;
 }
 
-export interface ICreateBookingResponse {
-  success: boolean;
-  message: string;
-
-  data: {
-    booking: IBooking;
-
-    checkoutUrl: string;
-  };
+export interface ICreateCheckoutPayload {
+  email: string;
+  name: string;
+  phone: string;
+  address: string;
 }

@@ -15,25 +15,29 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 import {
   useGetSingleProductQuery,
 } from "@/redux/features/product/product.api";
-import { useAddToCartMutation } from "@/redux/features/addCard/add.card.api";
-import { toast } from "sonner";
 
+import {
+  useAddToCartMutation,
+} from "@/redux/features/addCard/add.card.api";
+
+import {
+  useUserInfoQuery,
+} from "@/redux/features/auth/auth.api";
+
+import { toast } from "sonner";
 
 const CollectionsDetalis = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  // ======================================
-  // GET PRODUCT
-  // ======================================
+
+  // =========================================
+  // GET SINGLE PRODUCT
+  // =========================================
 
   const {
     data,
@@ -45,63 +49,52 @@ const CollectionsDetalis = () => {
 
   const product = data?.data;
 
-  // ======================================
+  // =========================================
+  // CHECK LOGIN
+  // =========================================
+
+  const {
+    data: userInfo,
+    isLoading: isUserLoading,
+  } = useUserInfoQuery(undefined);
+
+  const isLoggedIn = Boolean(userInfo?.data?._id);
+
+  // =========================================
   // STATES
-  // ======================================
+  // =========================================
 
-  const [
-    selectedImage,
-    setSelectedImage,
-  ] = useState<string>("");
+  const [selectedImage, setSelectedImage] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
-  const [
-    selectedColor,
-    setSelectedColor,
-  ] = useState<string>("");
-
-  const [
-    selectedSize,
-    setSelectedSize,
-  ] = useState<string>("");
-
-  const [
-    quantity,
-    setQuantity,
-  ] = useState(1);
-
-  const [
-    isWishlisted,
-    setIsWishlisted,
-  ] = useState(false);
-
-  // ======================================
+  // =========================================
   // ADD TO CART MUTATION
-  // ======================================
+  // =========================================
 
   const [
     addToCart,
-    {
-      isLoading: isAddingToCart,
-    },
+    { isLoading: isAddingToCart },
   ] = useAddToCartMutation();
 
-  // ======================================
+  // =========================================
   // LOADING
-  // ======================================
+  // =========================================
 
-  if (isLoading) {
+  if (isLoading || isUserLoading) {
     return <ProductDetailsSkeleton />;
   }
 
-  // ======================================
+  // =========================================
   // ERROR
-  // ======================================
+  // =========================================
 
   if (isError || !product) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center px-4">
         <div className="text-center">
-
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
             <Package className="h-7 w-7 text-muted-foreground" />
           </div>
@@ -114,166 +107,174 @@ const CollectionsDetalis = () => {
             Sorry, we couldn't find the product you're looking for.
           </p>
 
-          <Button
-            className="mt-6"
-     
-          >
+          <Button className="mt-6">
             <Link to="/collections">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Collections
             </Link>
           </Button>
-
         </div>
       </div>
     );
   }
 
-  // ======================================
+  // =========================================
   // IMAGES
-  // ======================================
+  // =========================================
 
   const images = [
     product.images?.main,
     product.images?.hover,
   ].filter(Boolean) as string[];
 
-  const activeImage =
-    selectedImage || images[0];
+  const activeImage = selectedImage || images[0];
 
-  // ======================================
+  // =========================================
   // DISCOUNT
-  // ======================================
+  // =========================================
 
   const discount =
     product.oldPrice &&
     product.oldPrice > product.price
       ? Math.round(
-          ((product.oldPrice -
-            product.price) /
+          ((product.oldPrice - product.price) /
             product.oldPrice) *
             100
         )
       : 0;
 
-  // ======================================
+  // =========================================
   // STOCK
-  // ======================================
+  // =========================================
 
-  const isOutOfStock =
-    product.stock <= 0;
+  const isOutOfStock = product.stock <= 0;
 
-  // ======================================
-  // INCREASE
-  // ======================================
+  // =========================================
+  // INCREASE QUANTITY
+  // =========================================
 
-  const handleQuantityIncrease =
-    () => {
-      if (quantity < product.stock) {
-        setQuantity(
-          (prev) => prev + 1
-        );
-      }
-    };
+  const handleQuantityIncrease = () => {
+    if (quantity < product.stock) {
+      setQuantity((prev) => prev + 1);
+    }
+  };
 
-  // ======================================
-  // DECREASE
-  // ======================================
+  // =========================================
+  // DECREASE QUANTITY
+  // =========================================
 
-  const handleQuantityDecrease =
-    () => {
-      if (quantity > 1) {
-        setQuantity(
-          (prev) => prev - 1
-        );
-      }
-    };
+  const handleQuantityDecrease = () => {
+    if (quantity > 1) {
+      setQuantity((prev) => prev - 1);
+    }
+  };
 
-  // ======================================
+  // =========================================
   // ADD TO CART
-  // ======================================
+  //
+  // IMPORTANT:
+  // Guest + Logged-in user both use
+  // backend cart API.
+  // =========================================
 
-  const handleAddToCart =
-    async () => {
-      // Out of stock
-      if (isOutOfStock) {
-        return;
-      }
+  const handleAddToCart = async () => {
+    // -----------------------------------------
+    // STOCK VALIDATION
+    // -----------------------------------------
 
-      // Color validation
-      if (
-        product.colors?.length > 0 &&
-        !selectedColor
-      ) {
-        toast.error(
-          "Please select a color"
-        );
-        return;
-      }
+    if (isOutOfStock) {
+      toast.error("This product is out of stock");
+      return;
+    }
 
-      // Size validation
-      if (
-        product.sizes?.length > 0 &&
-        !selectedSize
-      ) {
-        toast.error(
-          "Please select a size"
-        );
-        return;
-      }
+    // -----------------------------------------
+    // COLOR VALIDATION
+    // -----------------------------------------
 
-      // ==================================
-      // REQUEST DATA
-      // ==================================
+    if (product.colors?.length > 0 && !selectedColor) {
+      toast.error("Please select a color");
+      return;
+    }
 
-      const cartInfo = {
-        product: product._id,
-        quantity,
-        color: selectedColor,
-        size: selectedSize,
-      };
+    // -----------------------------------------
+    // SIZE VALIDATION
+    // -----------------------------------------
 
-      try {
-        const result =
-          await addToCart(
-            cartInfo
-          ).unwrap();
+    if (product.sizes?.length > 0 && !selectedSize) {
+      toast.error("Please select a size");
+      return;
+    }
 
-        console.log(
-          "Cart response:",
-          result
-        );
+    // -----------------------------------------
+    // CART DATA
+    // -----------------------------------------
 
-        toast.success(
-          "Product added to cart successfully!"
-        );
-
-        navigate("/user/my-card")
-      
-
-      } catch (error: any) {
-        console.error(
-          "Add to cart error:",
-          error
-        );
-
-        toast.success(
-         "Please log in to your account first. Once you’re logged in, add your card details and then complete the payment"
-        );
-
-        navigate("/login")
-      }
+    const cartInfo = {
+      product: product._id,
+      quantity,
+      color: selectedColor,
+      size: selectedSize,
     };
+
+    console.log("Adding product to cart:", cartInfo);
+
+    // -----------------------------------------
+    // ADD TO BACKEND CART
+    //
+    // This works for:
+    // 1. Guest user
+    // 2. Logged-in user
+    // -----------------------------------------
+
+    try {
+      const result = await addToCart(cartInfo).unwrap();
+
+      console.log("Cart response:", result);
+
+      // ---------------------------------------
+      // SUCCESS
+      // ---------------------------------------
+
+      toast.success(
+        result?.message ||
+          "Product added to cart successfully!"
+      );
+
+      // ---------------------------------------
+      // GO TO CART
+      // ---------------------------------------
+
+      navigate("/user/my-card");
+    } catch (error: any) {
+      // ---------------------------------------
+      // ERROR
+      // ---------------------------------------
+
+      console.error(
+        "Add to cart error:",
+        error
+      );
+
+      toast.error(
+        error?.data?.message ||
+          error?.error?.data?.message ||
+          "Could not add product to cart. Please try again."
+      );
+    }
+  };
+
+  // =========================================
+  // UI
+  // =========================================
 
   return (
     <div className="min-h-screen bg-background">
 
-      {/* ==================================
+      {/* =====================================
           BREADCRUMB
-      ================================== */}
+      ====================================== */}
 
       <div className="border-b bg-muted/20">
-
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -303,24 +304,25 @@ const CollectionsDetalis = () => {
           </div>
 
         </div>
-
       </div>
 
-      {/* ==================================
+      {/* =====================================
           PRODUCT SECTION
-      ================================== */}
+      ====================================== */}
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
 
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
 
-          {/* ==================================
-              IMAGE
-          ================================== */}
+          {/* =================================
+              PRODUCT IMAGE
+          ================================= */}
 
           <div className="space-y-4">
 
             <div className="group relative overflow-hidden rounded-2xl border bg-muted/20">
+
+              {/* BADGE */}
 
               {product.badge && (
                 <div className="absolute left-4 top-4 z-10">
@@ -330,6 +332,8 @@ const CollectionsDetalis = () => {
                 </div>
               )}
 
+              {/* DISCOUNT */}
+
               {discount > 0 && (
                 <div className="absolute right-4 top-4 z-10">
                   <span className="rounded-full bg-red-500 px-3 py-1.5 text-xs font-bold text-white">
@@ -338,78 +342,78 @@ const CollectionsDetalis = () => {
                 </div>
               )}
 
-              <img
-                src={activeImage}
-                alt={product.name}
-                className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-              />
+              {/* IMAGE */}
+
+              {activeImage && (
+                <img
+                  src={activeImage}
+                  alt={product.name}
+                  className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                />
+              )}
 
             </div>
+
+            {/* IMAGE THUMBNAILS */}
 
             {images.length > 1 && (
               <div className="grid grid-cols-2 gap-3">
 
-                {images.map(
-                  (
-                    image,
-                    index
-                  ) => {
+                {images.map((image, index) => {
 
-                    const isActive =
-                      activeImage ===
-                      image;
+                  const isActive =
+                    activeImage === image;
 
-                    return (
-                      <Button
-                        key={`${image}-${index}`}
-                        type="button"
-                        onClick={() =>
-                          setSelectedImage(
-                            image
-                          )
-                        }
-                        className={`relative overflow-hidden rounded-xl border-2 transition-all ${
-                          isActive
-                            ? "border-foreground ring-2 ring-foreground/10"
-                            : "border-transparent hover:border-border"
-                        }`}
-                      >
+                  return (
+                    <button
+                      key={`${image}-${index}`}
+                      type="button"
+                      onClick={() =>
+                        setSelectedImage(image)
+                      }
+                      className={`relative overflow-hidden rounded-xl border-2 transition-all ${
+                        isActive
+                          ? "border-foreground ring-2 ring-foreground/10"
+                          : "border-transparent hover:border-border"
+                      }`}
+                    >
 
-                        <img
-                          src={image}
-                          alt={`${product.name} ${index + 1}`}
-                          className="aspect-square w-full object-cover"
-                        />
+                      <img
+                        src={image}
+                        alt={`${product.name} ${index + 1}`}
+                        className="aspect-square w-full object-cover"
+                      />
 
-                        {isActive && (
-                          <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background">
+                      {isActive && (
+                        <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background">
+                          <Check className="h-3.5 w-3.5" />
+                        </div>
+                      )}
 
-                            <Check className="h-3.5 w-3.5" />
-
-                          </div>
-                        )}
-
-                      </Button>
-                    );
-                  }
-                )}
+                    </button>
+                  );
+                })}
 
               </div>
             )}
 
           </div>
 
-          {/* ==================================
+          {/* =================================
               PRODUCT INFO
-          ================================== */}
+          ================================= */}
 
           <div className="flex flex-col">
+
+            {/* CATEGORY */}
 
             <div className="mb-3">
               <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
                 {product.category}
               </span>
             </div>
+
+            {/* PRODUCT NAME */}
 
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
               {product.name}
@@ -424,8 +428,7 @@ const CollectionsDetalis = () => {
               </span>
 
               {product.oldPrice &&
-                product.oldPrice >
-                  product.price && (
+                product.oldPrice > product.price && (
                   <>
                     <span className="text-lg text-muted-foreground line-through">
                       ${product.oldPrice}
@@ -481,10 +484,11 @@ const CollectionsDetalis = () => {
 
             </div>
 
-            {/* COLOR */}
+            {/* =================================
+                COLOR
+            ================================= */}
 
-            {product.colors?.length >
-              0 && (
+            {product.colors?.length > 0 && (
               <div className="mt-7">
 
                 <div className="mb-3 flex items-center justify-between">
@@ -507,17 +511,14 @@ const CollectionsDetalis = () => {
                     (color: string) => {
 
                       const selected =
-                        selectedColor ===
-                        color;
+                        selectedColor === color;
 
                       return (
                         <button
                           key={color}
                           type="button"
                           onClick={() =>
-                            setSelectedColor(
-                              color
-                            )
+                            setSelectedColor(color)
                           }
                           className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
                             selected
@@ -536,10 +537,11 @@ const CollectionsDetalis = () => {
               </div>
             )}
 
-            {/* SIZE */}
+            {/* =================================
+                SIZE
+            ================================= */}
 
-            {product.sizes?.length >
-              0 && (
+            {product.sizes?.length > 0 && (
               <div className="mt-7">
 
                 <div className="mb-3 flex items-center justify-between">
@@ -563,17 +565,14 @@ const CollectionsDetalis = () => {
                     (size: string) => {
 
                       const selected =
-                        selectedSize ===
-                        size;
+                        selectedSize === size;
 
                       return (
                         <button
                           key={size}
                           type="button"
                           onClick={() =>
-                            setSelectedSize(
-                              size
-                            )
+                            setSelectedSize(size)
                           }
                           className={`flex h-10 min-w-12 items-center justify-center rounded-lg border px-4 text-sm font-semibold transition-all ${
                             selected
@@ -592,9 +591,9 @@ const CollectionsDetalis = () => {
               </div>
             )}
 
-            {/* ==================================
+            {/* =================================
                 QUANTITY + ADD CART
-            ================================== */}
+            ================================= */}
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
 
@@ -604,12 +603,8 @@ const CollectionsDetalis = () => {
 
                 <button
                   type="button"
-                  onClick={
-                    handleQuantityDecrease
-                  }
-                  disabled={
-                    quantity <= 1
-                  }
+                  onClick={handleQuantityDecrease}
+                  disabled={quantity <= 1}
                   className="flex h-full w-10 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
                 >
                   <Minus className="h-4 w-4" />
@@ -621,13 +616,8 @@ const CollectionsDetalis = () => {
 
                 <button
                   type="button"
-                  onClick={
-                    handleQuantityIncrease
-                  }
-                  disabled={
-                    quantity >=
-                    product.stock
-                  }
+                  onClick={handleQuantityIncrease}
+                  disabled={quantity >= product.stock}
                   className="flex h-full w-10 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
                 >
                   <Plus className="h-4 w-4" />
@@ -638,13 +628,12 @@ const CollectionsDetalis = () => {
               {/* ADD TO CART */}
 
               <Button
+                type="button"
                 disabled={
                   isOutOfStock ||
                   isAddingToCart
                 }
-                onClick={
-                  handleAddToCart
-                }
+                onClick={handleAddToCart}
                 className="h-12 flex-1 rounded-lg"
               >
 
@@ -687,7 +676,9 @@ const CollectionsDetalis = () => {
 
             </div>
 
-            {/* BENEFITS */}
+            {/* =================================
+                BENEFITS
+            ================================= */}
 
             <Card className="mt-8 rounded-2xl shadow-none">
 
@@ -727,9 +718,9 @@ const CollectionsDetalis = () => {
 
       </section>
 
-      {/* ==================================
+      {/* =====================================
           BOTTOM DESCRIPTION
-      ================================== */}
+      ====================================== */}
 
       <section className="border-t bg-muted/20">
 
@@ -759,9 +750,9 @@ const CollectionsDetalis = () => {
   );
 };
 
-// ======================================
-// BENEFIT
-// ======================================
+// =========================================
+// BENEFIT COMPONENT
+// =========================================
 
 const Benefit = ({
   icon,
@@ -795,63 +786,62 @@ const Benefit = ({
   );
 };
 
-// ======================================
-// SKELETON
-// ======================================
+// =========================================
+// PRODUCT DETAILS SKELETON
+// =========================================
 
-const ProductDetailsSkeleton =
-  () => {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+const ProductDetailsSkeleton = () => {
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 
-        <div className="grid animate-pulse gap-8 lg:grid-cols-2 lg:gap-14">
+      <div className="grid animate-pulse gap-8 lg:grid-cols-2 lg:gap-14">
 
-          <div>
+        <div>
 
-            <div className="aspect-square rounded-2xl bg-muted" />
+          <div className="aspect-square rounded-2xl bg-muted" />
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-3">
 
-              <div className="aspect-square rounded-xl bg-muted" />
+            <div className="aspect-square rounded-xl bg-muted" />
 
-              <div className="aspect-square rounded-xl bg-muted" />
-
-            </div>
-
-          </div>
-
-          <div className="space-y-5">
-
-            <div className="h-4 w-32 rounded bg-muted" />
-
-            <div className="h-10 w-3/4 rounded bg-muted" />
-
-            <div className="h-8 w-40 rounded bg-muted" />
-
-            <div className="h-px w-full bg-muted" />
-
-            <div className="space-y-2">
-
-              <div className="h-4 w-24 rounded bg-muted" />
-
-              <div className="h-4 w-full rounded bg-muted" />
-
-              <div className="h-4 w-5/6 rounded bg-muted" />
-
-            </div>
-
-            <div className="h-20 w-full rounded bg-muted" />
-
-            <div className="h-20 w-full rounded bg-muted" />
-
-            <div className="h-12 w-full rounded bg-muted" />
+            <div className="aspect-square rounded-xl bg-muted" />
 
           </div>
 
         </div>
 
+        <div className="space-y-5">
+
+          <div className="h-4 w-32 rounded bg-muted" />
+
+          <div className="h-10 w-3/4 rounded bg-muted" />
+
+          <div className="h-8 w-40 rounded bg-muted" />
+
+          <div className="h-px w-full bg-muted" />
+
+          <div className="space-y-2">
+
+            <div className="h-4 w-24 rounded bg-muted" />
+
+            <div className="h-4 w-full rounded bg-muted" />
+
+            <div className="h-4 w-5/6 rounded bg-muted" />
+
+          </div>
+
+          <div className="h-20 w-full rounded bg-muted" />
+
+          <div className="h-20 w-full rounded bg-muted" />
+
+          <div className="h-12 w-full rounded bg-muted" />
+
+        </div>
+
       </div>
-    );
-  };
+
+    </div>
+  );
+};
 
 export default CollectionsDetalis;

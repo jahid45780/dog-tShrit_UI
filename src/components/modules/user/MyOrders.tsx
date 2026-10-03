@@ -17,18 +17,63 @@ import {
   useGetMyBookingsQuery,
 } from "@/redux/features/booking/booking.api";
 
+// =========================================================
+// TYPES
+// =========================================================
+
+interface BookingItem {
+  product?: string | {
+    _id?: string;
+  };
+  name?: string;
+  quantity?: number;
+  color?: string;
+  size?: string;
+  price?: number;
+  subtotal?: number;
+}
+
+interface Booking {
+  _id: string;
+  createdAt?: string;
+
+  paymentStatus?: string;
+  bookingStatus?: string;
+
+  items?: BookingItem[];
+
+  totalAmount?: number;
+}
+
+// =========================================================
+// MY ORDERS
+// =========================================================
+
 const MyOrders = () => {
+  // =======================================================
+  // IMPORTANT
+  // =======================================================
+  // এখানে আর useUserInfoQuery ব্যবহার করছি না।
+  //
+  // কারণ:
+  // 1. Logged-in user -> userId দিয়ে backend order দেবে
+  // 2. Guest -> guestCartId cookie দিয়ে backend order দেবে
+  //
+  // তাই frontend থেকে Login Required block করা যাবে না।
+  // =======================================================
+
   const {
     data,
     isLoading,
     isError,
+    refetch,
   } = useGetMyBookingsQuery(undefined);
 
-  const bookings = data?.data ?? [];
+  const bookings: Booking[] = data?.data ?? [];
 
-  // =========================
+  // =======================================================
   // LOADING
-  // =========================
+  // =======================================================
 
   if (isLoading) {
     return (
@@ -53,9 +98,9 @@ const MyOrders = () => {
     );
   }
 
-  // =========================
+  // =======================================================
   // ERROR
-  // =========================
+  // =======================================================
 
   if (isError) {
     return (
@@ -69,32 +114,46 @@ const MyOrders = () => {
             </div>
 
             <h2 className="mt-5 text-2xl font-black text-gray-950">
-              Unable to load orders
+              Unable to Load Orders
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-gray-500">
-              Something went wrong while loading
-              your orders. Please try again.
+              Something went wrong while loading your orders.
+              Please try again.
             </p>
 
-            <Link to="/collections">
-              <Button className="mt-6 rounded-xl bg-gray-950 hover:bg-orange-600">
-                Continue Shopping
+            <div className="mt-6 flex justify-center gap-3">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => refetch()}
+              >
+                Try Again
               </Button>
-            </Link>
+
+              <Link to="/collections">
+                <Button className="rounded-xl bg-gray-950 hover:bg-orange-600">
+                  Continue Shopping
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // =======================================================
+  // PAGE
+  // =======================================================
+
   return (
     <div className="min-h-screen bg-[#fafaf9]">
-      {/* ================= HEADER ================= */}
-
       <MyOrdersHeader />
 
-      {/* ================= BREADCRUMB ================= */}
+      {/* ===================================================
+          BREADCRUMB
+      =================================================== */}
 
       <div className="border-b bg-white">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
@@ -115,10 +174,13 @@ const MyOrders = () => {
         </div>
       </div>
 
-      {/* ================= MAIN ================= */}
+      {/* ===================================================
+          MAIN
+      =================================================== */}
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
-        {/* PAGE TITLE */}
+
+        {/* TITLE */}
 
         <div className="mb-8">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-600">
@@ -131,16 +193,18 @@ const MyOrders = () => {
           </h1>
 
           <p className="mt-2 text-sm text-gray-500">
-            View your orders and check your payment
-            status.
+            View your orders and check your payment status.
           </p>
         </div>
 
-        {/* ================= EMPTY ================= */}
+        {/* =================================================
+            EMPTY
+        ================================================= */}
 
         {bookings.length === 0 ? (
           <Card className="rounded-3xl border-0 bg-white shadow-sm">
             <CardContent className="flex flex-col items-center justify-center px-6 py-20 text-center">
+
               <div className="relative">
                 <div className="flex h-28 w-28 items-center justify-center rounded-full bg-orange-50">
                   <ShoppingBag className="h-12 w-12 text-orange-500" />
@@ -157,8 +221,8 @@ const MyOrders = () => {
 
               <p className="mt-2 max-w-md text-sm leading-6 text-gray-500">
                 You haven't placed any orders yet.
-                Explore our collection and find
-                something special for your pet.
+                Explore our collection and find something
+                special for your pet.
               </p>
 
               <Link to="/collections">
@@ -170,8 +234,6 @@ const MyOrders = () => {
             </CardContent>
           </Card>
         ) : (
-          /* ================= ORDERS ================= */
-
           <div className="space-y-5">
             {bookings.map((booking) => (
               <OrderCard
@@ -186,22 +248,30 @@ const MyOrders = () => {
   );
 };
 
-// ========================================
+// =========================================================
 // ORDER CARD
-// ========================================
+// =========================================================
 
 const OrderCard = ({
   booking,
 }: {
-  booking: any;
+  booking: Booking;
 }) => {
+  const items = Array.isArray(booking.items)
+    ? booking.items
+    : [];
+
   return (
     <Card className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md">
       <CardContent className="p-5 sm:p-6">
-        {/* TOP */}
+
+        {/* =================================================
+            TOP
+        ================================================= */}
 
         <div className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-center">
-          <div>
+
+          <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400">
               Order ID
             </p>
@@ -214,14 +284,11 @@ const OrderCard = ({
               <p className="mt-1 text-xs text-gray-400">
                 {new Date(
                   booking.createdAt
-                ).toLocaleDateString(
-                  "en-US",
-                  {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  }
-                )}
+                ).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
               </p>
             )}
           </div>
@@ -239,78 +306,102 @@ const OrderCard = ({
           </div>
         </div>
 
-        {/* ================= ITEMS ================= */}
+        {/* =================================================
+            ITEMS
+        ================================================= */}
 
         <div className="py-5">
+
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
             Products
           </p>
 
-          <div className="space-y-4">
-            {booking.items
-              ?.slice(0, 3)
-              .map(
-                (
-                  item: any,
-                  index: number
-                ) => (
-                  <div
-                    key={`${item.product}-${index}`}
-                    className="flex items-center justify-between gap-4"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50">
-                        <Package className="h-5 w-5 text-orange-500" />
-                      </div>
+          {items.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No product information available.
+            </p>
+          ) : (
+            <div className="space-y-4">
 
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-gray-900">
-                          {item.name}
-                        </p>
+              {items.slice(0, 3).map(
+                (item, index) => {
 
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                          <span>
-                            Qty: {item.quantity}
-                          </span>
+                  const quantity =
+                    Number(item.quantity ?? 0);
 
-                          {item.color && (
+                  const subtotal =
+                    Number(item.subtotal ?? 0);
+
+                  const productId =
+                    typeof item.product === "string"
+                      ? item.product
+                      : item.product?._id;
+
+                  return (
+                    <div
+                      key={`${productId ?? "item"}-${index}`}
+                      className="flex items-center justify-between gap-4"
+                    >
+
+                      <div className="flex min-w-0 items-center gap-3">
+
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50">
+                          <Package className="h-5 w-5 text-orange-500" />
+                        </div>
+
+                        <div className="min-w-0">
+
+                          <p className="truncate text-sm font-bold text-gray-900">
+                            {item.name || "Product"}
+                          </p>
+
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+
                             <span>
-                              Color: {item.color}
+                              Qty: {quantity}
                             </span>
-                          )}
 
-                          {item.size && (
-                            <span>
-                              Size: {item.size}
-                            </span>
-                          )}
+                            {item.color && (
+                              <span>
+                                Color: {item.color}
+                              </span>
+                            )}
+
+                            {item.size && (
+                              <span>
+                                Size: {item.size}
+                              </span>
+                            )}
+
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <p className="shrink-0 text-sm font-bold text-gray-900">
-                      $
-                      {Number(
-                        item.subtotal
-                      ).toFixed(2)}
-                    </p>
-                  </div>
-                )
+                      <p className="shrink-0 text-sm font-bold text-gray-900">
+                        ${subtotal.toFixed(2)}
+                      </p>
+
+                    </div>
+                  );
+                }
               )}
 
-            {booking.items?.length > 3 && (
-              <p className="text-xs font-bold text-orange-600">
-                +{" "}
-                {booking.items.length - 3}{" "}
-                more product(s)
-              </p>
-            )}
-          </div>
+              {items.length > 3 && (
+                <p className="text-xs font-bold text-orange-600">
+                  + {items.length - 3} more product(s)
+                </p>
+              )}
+
+            </div>
+          )}
         </div>
 
-        {/* ================= BOTTOM ================= */}
+        {/* =================================================
+            BOTTOM
+        ================================================= */}
 
         <div className="flex flex-col justify-between gap-4 border-t pt-5 sm:flex-row sm:items-center">
+
           <div>
             <p className="text-xs text-gray-400">
               Total Amount
@@ -319,36 +410,40 @@ const OrderCard = ({
             <p className="mt-0.5 text-2xl font-black text-orange-600">
               $
               {Number(
-                booking.totalAmount
+                booking.totalAmount ?? 0
               ).toFixed(2)}
             </p>
           </div>
 
-          {/* Details later */}
-         <Link to={`/my-bookings/${booking._id}`}>
-  <Button
-    variant="outline"
-    className="rounded-xl"
-  >
-    View Order
-    <ChevronRight className="ml-2 h-4 w-4" />
-  </Button>
-</Link>
+          <Link
+            to={`/my-bookings/${booking._id}`}
+          >
+            <Button
+              variant="outline"
+              className="w-full rounded-xl sm:w-auto"
+            >
+              View Order
+
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+
         </div>
       </CardContent>
     </Card>
   );
 };
 
-// ========================================
+// =========================================================
 // PAYMENT STATUS
-// ========================================
+// =========================================================
 
 const PaymentStatus = ({
   status,
 }: {
-  status: string;
+  status?: string;
 }) => {
+
   if (status === "PAID") {
     return (
       <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
@@ -373,15 +468,16 @@ const PaymentStatus = ({
   );
 };
 
-// ========================================
+// =========================================================
 // BOOKING STATUS
-// ========================================
+// =========================================================
 
 const BookingStatus = ({
   status,
 }: {
-  status: string;
+  status?: string;
 }) => {
+
   if (status === "CONFIRMED") {
     return (
       <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
@@ -405,14 +501,16 @@ const BookingStatus = ({
   );
 };
 
-// ========================================
+// =========================================================
 // HEADER
-// ========================================
+// =========================================================
 
 const MyOrdersHeader = () => {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur">
+
       <div className="mx-auto flex h-[70px] max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+
         {/* LOGO */}
 
         <Link
@@ -437,6 +535,7 @@ const MyOrdersHeader = () => {
         {/* NAV */}
 
         <div className="flex items-center gap-2">
+
           <Link
             to="/collections"
             className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-orange-50 hover:text-orange-600 sm:block"
@@ -445,11 +544,12 @@ const MyOrdersHeader = () => {
           </Link>
 
           <Link
-            to="/my-cart"
+            to="/user/my-card"
             className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 text-gray-700 transition hover:bg-orange-50 hover:text-orange-600"
           >
             <ShoppingBag className="h-5 w-5" />
           </Link>
+
         </div>
       </div>
     </header>

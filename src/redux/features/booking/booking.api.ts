@@ -1,7 +1,7 @@
 
 
 import { baseApi } from "@/redux/baseApi";
-import type { IBooking, ICreateBookingResponse } from "@/types";
+import type { IBooking, ICreateCheckoutPayload } from "@/types";
 
 
 
@@ -11,20 +11,18 @@ export const BookingApi = baseApi.injectEndpoints({
     // CREATE BOOKING
     // =====================================
 
-    createBooking: build.mutation<
-      ICreateBookingResponse,
-      void
+   createBooking: build.mutation<
+      any,
+      ICreateCheckoutPayload
     >({
-      query: () => ({
-        url: "/booking/create",
+      query: (bookingInfo) => ({
+        url: "/booking/checkout",
         method: "POST",
+        data: bookingInfo,
       }),
-
-      invalidatesTags: [
-        "CART",
-        "BOOKING",
-      ],
+      invalidatesTags: ["BOOKING", "CART"],
     }),
+  
 
     // =====================================
     // GET MY BOOKINGS

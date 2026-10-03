@@ -97,7 +97,7 @@ export const router = createBrowserRouter([
   },
 
   {
-    Component: withAuth(DashboardLayout, role.USER as IRole),
+    Component:DashboardLayout,
     path: "/user",
     children: [
        {
