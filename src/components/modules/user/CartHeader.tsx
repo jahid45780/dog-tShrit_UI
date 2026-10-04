@@ -8,7 +8,9 @@ export const AtnamiraHeader = () => {
   const { data: userInfo, isLoading: isUserLoading } =
     useUserInfoQuery(undefined);
 
-  const isLoggedIn = Boolean(userInfo?.data?._id);
+  // userInfo is still called because the cart request
+  // waits until authentication state is checked.
+  void userInfo;
 
   // Guest + Logged-in both use backend cart
   const {

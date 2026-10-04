@@ -1,7 +1,6 @@
 
 import {
   AlertTriangle,
-  ArrowUpRight,
   CheckCircle2,
   Clock3,
   CreditCard,

@@ -58,7 +58,7 @@ const CollectionsDetalis = () => {
     isLoading: isUserLoading,
   } = useUserInfoQuery(undefined);
 
-  const isLoggedIn = Boolean(userInfo?.data?._id);
+   void userInfo;
 
   // =========================================
   // STATES
