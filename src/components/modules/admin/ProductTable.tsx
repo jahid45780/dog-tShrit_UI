@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   Boxes,
   DollarSign,
+  Edit,
   MoreHorizontal,
   Package,
   Tag,
@@ -43,15 +44,19 @@ import {
 interface ProductTableProps {
   products: IProduct[];
   onDelete: (id: string) => void;
+  onEdit: (id: string) => void;
   deletingId: string | null;
 }
 
 const ProductTable = ({
   products,
   onDelete,
+  onEdit,
   deletingId,
 }: ProductTableProps) => {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(
+    null
+  );
 
   const selectedProduct = products.find(
     (product) => product._id === deleteId
@@ -113,7 +118,6 @@ const ProductTable = ({
                     {/* ================= Product ================= */}
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {/* Image */}
                         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border bg-muted">
                           {product.images?.main ? (
                             <img
@@ -128,7 +132,6 @@ const ProductTable = ({
                           )}
                         </div>
 
-                        {/* Product Info */}
                         <div className="min-w-0">
                           <p className="max-w-[240px] truncate font-semibold">
                             {product.name}
@@ -162,11 +165,11 @@ const ProductTable = ({
                             ${product.price}
                           </p>
 
-                          {product.oldPrice && (
+                          {product.oldPrice ? (
                             <p className="text-xs text-muted-foreground line-through">
                               ${product.oldPrice}
                             </p>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </TableCell>
@@ -215,6 +218,19 @@ const ProductTable = ({
                         </DropdownMenuTrigger>
 
                         <DropdownMenuContent align="end">
+                          {/* Edit */}
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() =>
+                              onEdit(product._id)
+                            }
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+
+                            Edit Product
+                          </DropdownMenuItem>
+
+                          {/* Delete */}
                           <DropdownMenuItem
                             className="cursor-pointer text-destructive focus:text-destructive"
                             onClick={() =>
@@ -258,6 +274,7 @@ const ProductTable = ({
               </span>
               ?
               <br />
+
               <span className="mt-2 block">
                 This action cannot be undone.
               </span>

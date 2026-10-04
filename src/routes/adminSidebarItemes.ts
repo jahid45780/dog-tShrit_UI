@@ -44,7 +44,6 @@ export const adminSidebarItems:ISidebarItem[] = [
         url: "/admin/products",
         component:ProductAll,
       },
-    
    
     ],
   },

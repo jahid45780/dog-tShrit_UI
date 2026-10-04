@@ -20,9 +20,15 @@ import {
 } from "@/redux/features/product/product.api";
 
 import ProductTable from "./ProductTable";
-import { Link } from "react-router-dom";
+
+import { Link, useNavigate } from "react-router-dom";
 
 const ProductAll = () => {
+  // ==========================================
+  // Navigation
+  // ==========================================
+  const navigate = useNavigate();
+
   // ==========================================
   // Pagination State
   // ==========================================
@@ -35,6 +41,9 @@ const ProductAll = () => {
   // ==========================================
   const [search, setSearch] = useState("");
 
+  // ==========================================
+  // Delete State
+  // ==========================================
   const [deletingId, setDeletingId] = useState<string | null>(
     null
   );
@@ -69,6 +78,17 @@ const ProductAll = () => {
   const totalPages = data?.meta?.totalPage ?? 1;
 
   // ==========================================
+  // Edit Product
+  // ==========================================
+  const handleEdit = (productId: string) => {
+    navigate("/admin/edit-product", {
+      state: {
+        productId,
+      },
+    });
+  };
+
+  // ==========================================
   // Delete Handler
   // ==========================================
   const handleDelete = async (id: string) => {
@@ -100,7 +120,6 @@ const ProductAll = () => {
   ) => {
     setSearch(event.target.value);
 
-    // Search করলে প্রথম page-এ চলে যাবে
     setPage(1);
   };
 
@@ -136,6 +155,7 @@ const ProductAll = () => {
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
     setLimit(Number(event.target.value));
+
     setPage(1);
   };
 
@@ -173,12 +193,12 @@ const ProductAll = () => {
             </p>
           </div>
         </div>
-           
-           <Link to={"/admin/add-product"} >
-        <Button className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
+
+        <Link to="/admin/add-product">
+          <Button className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
         </Link>
       </div>
 
@@ -250,6 +270,7 @@ const ProductAll = () => {
             />
           </div>
 
+          {/* Limit */}
           <div className="flex items-center gap-3">
             <span className="whitespace-nowrap text-sm text-muted-foreground">
               Show
@@ -295,6 +316,7 @@ const ProductAll = () => {
           products={products}
           onDelete={handleDelete}
           deletingId={deletingId}
+          onEdit={handleEdit}
         />
       )}
 

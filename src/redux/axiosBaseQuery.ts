@@ -1,3 +1,4 @@
+
 import axios, {
   type AxiosError,
   type AxiosRequestConfig,
@@ -17,13 +18,11 @@ const axiosInstance = axios.create({
     "http://localhost:5000/api/v1",
 
   // IMPORTANT:
-  // Send cookies such as guestCartId,
-  // AccessToken and RefreshToken
+  // Send cookies such as:
+  // - guestCartId
+  // - AccessToken
+  // - RefreshToken
   withCredentials: true,
-
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 const axiosBaseQuery =
@@ -36,14 +35,95 @@ const axiosBaseQuery =
     headers,
   }: AxiosBaseQueryArgs) => {
     try {
-      const result = await axiosInstance({
+      // ==========================================
+      // CHECK WHETHER REQUEST BODY IS FORMDATA
+      // ==========================================
+
+      const isFormData =
+        typeof FormData !== "undefined" &&
+        data instanceof FormData;
+
+      // ==========================================
+      // REQUEST CONFIG
+      // ==========================================
+
+      const requestConfig: AxiosRequestConfig = {
         url,
         method,
         data,
         params,
-        headers,
+
+        // IMPORTANT:
+        // Keep cookies enabled for every request.
         withCredentials: true,
-      });
+
+        headers: isFormData
+          ? {
+              // ==================================
+              // FORMDATA REQUEST
+              // ==================================
+              //
+              // DO NOT set Content-Type here.
+              //
+              // Browser/Axios automatically creates:
+              //
+              // multipart/form-data;
+              // boundary=----------------...
+              //
+              // This is required by Multer.
+              ...headers,
+            }
+          : {
+              // ==================================
+              // NORMAL JSON REQUEST
+              // ==================================
+
+              "Content-Type": "application/json",
+
+              ...headers,
+            },
+      };
+
+      // ==========================================
+      // DEBUG
+      // ==========================================
+
+      if (import.meta.env.DEV) {
+        console.log("========== AXIOS REQUEST ==========");
+        console.log("URL:", url);
+        console.log("METHOD:", method);
+        console.log(
+          "TYPE:",
+          isFormData ? "FORMDATA" : "JSON"
+        );
+
+        if (isFormData && data instanceof FormData) {
+          console.log("FORMDATA CONTENT:");
+
+          for (const [key, value] of data.entries()) {
+            if (value instanceof File) {
+              console.log(
+                `${key}: FILE`,
+                value.name,
+                value.type,
+                value.size
+              );
+            } else {
+              console.log(`${key}:`, value);
+            }
+          }
+        }
+
+        console.log("==================================");
+      }
+
+      // ==========================================
+      // AXIOS REQUEST
+      // ==========================================
+
+      const result = await axiosInstance(
+        requestConfig
+      );
 
       return {
         data: result.data,
@@ -54,6 +134,7 @@ const axiosBaseQuery =
       return {
         error: {
           status: error.response?.status || 500,
+
           data:
             error.response?.data || {
               success: false,
